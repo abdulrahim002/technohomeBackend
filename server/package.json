@@ -1,0 +1,43 @@
+{
+  "name": "technohome-server",
+  "version": "1.0.0",
+  "description": "Techno Home Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "technohome",
+    "maintenance",
+    "api"
+  ],
+  "author": "Techno Home Team",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vision": "^5.3.5",
+    "@google/generative-ai": "^0.24.1",
+    "arabic-persian-reshaper": "^1.0.1",
+    "axios": "^1.15.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "pdfkit": "^0.18.0",
+    "rtl-detect": "^1.1.2",
+    "sharp": "^0.34.5",
+    "socket.io": "^4.8.3",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
