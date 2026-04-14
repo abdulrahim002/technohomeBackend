@@ -18,6 +18,7 @@ const serviceRequestRoutes = require('./routes/serviceRequest.routes');
 const adminRoutes = require('./routes/admin.routes');
 const troubleshootRoutes = require('./routes/troubleshoot.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const applianceRoutes = require('./routes/appliance.routes');
 
 // Import error handler
 const errorHandler = require('./middlewares/errorHandler');
@@ -67,6 +68,7 @@ app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/troubleshoots', troubleshootRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/appliance-types', applianceRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -6,11 +6,15 @@ const Brand = require('../models/Brand.model');
  */
 exports.getAllBrands = async (req, res, next) => {
   try {
-    const { isActive, search } = req.query;
+    const { isActive, search, applianceType } = req.query;
     let query = {};
 
     if (isActive !== undefined) {
       query.isActive = isActive === 'true';
+    }
+
+    if (applianceType) {
+      query.supportedAppliances = applianceType;
     }
 
     if (search) {
