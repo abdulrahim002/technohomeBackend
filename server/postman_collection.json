@@ -1,0 +1,295 @@
+{
+	"info": {
+		"_postman_id": "technohome-api-collection",
+		"name": "Techno Home API - Final Cleanup",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register Technician",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"firstName\": \"أحمد\",\r\n  \"lastName\": \"التقني\",\r\n  \"phone\": \"0910000000\",\r\n  \"password\": \"password123\",\r\n  \"role\": \"technician\",\r\n  \"city\": \"69e2d768b09281f4166eb883\",\r\n  \"specialties\": [\"69e2d768b09281f4166eb893\", \"69e2d768b09281f4166eb894\"],\r\n  \"yearsOfExperience\": 5,\r\n  \"bio\": \"خبير في صيانة المكيفات والمنظومات الذكية\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"phone\": \"0910000000\",\r\n  \"password\": \"password123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Me (Profile)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Lookups",
+			"item": [
+				{
+					"name": "Get Appliances",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/service-requests/lookups/appliances",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"service-requests",
+								"lookups",
+								"appliances"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Cities",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/service-requests/lookups/cities",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"service-requests",
+								"lookups",
+								"cities"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Service Requests",
+			"item": [
+				{
+					"name": "AI Analyze Only",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"applianceType\": \"69e2d768b09281f4166eb893\",\r\n  \"brand\": \"Samsung\",\r\n  \"description\": \"المكيف لا يبرد ويصدر صوتاً عالياً\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/service-requests/analyze",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"service-requests",
+								"analyze"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"applianceType\": \"69e2d768b09281f4166eb893\",\r\n  \"brand\": \"Samsung\",\r\n  \"description\": \"المكيف يتوقف فجأة بعد دقائق من التشغيل\",\r\n  \"preferredDate\": \"2026-05-20\",\r\n  \"preferredTime\": \"10:00 AM\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/service-requests",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"service-requests"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get Pending Technicians",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pending-technicians",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pending-technicians"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Technician",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/verify-technician/ID_HERE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"verify-technician",
+								"ID_HERE"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/statistics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"statistics"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

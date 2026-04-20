@@ -11,20 +11,19 @@ dotenv.config();
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
-const userRoutes = require('./routes/user.routes');
-const deviceRoutes = require('./routes/device.routes');
-const brandRoutes = require('./routes/brand.routes');
-const serviceRequestRoutes = require('./routes/serviceRequest.routes');
+const serviceRequestRoutes = require('./routes/serviceRequest.routes.js');
 const adminRoutes = require('./routes/admin.routes');
-const troubleshootRoutes = require('./routes/troubleshoot.routes');
-const notificationRoutes = require('./routes/notification.routes');
-const applianceRoutes = require('./routes/appliance.routes');
+const errorCodeRoutes = require('./routes/errorCode.routes');
 
 // Import error handler
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 const http = require('http');
+
+// HTTP request logging (Absolute Top for visibility)
+app.use(morgan('dev'));
+
 const server = http.createServer(app);
 const { initSocket } = require('./services/socketService');
 
@@ -47,9 +46,6 @@ app.use(express.urlencoded({ extended: true }));
 // Static folder for file uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// HTTP request logging
-app.use(morgan('dev'));
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -61,14 +57,9 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/devices', deviceRoutes);
-app.use('/api/brands', brandRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/troubleshoots', troubleshootRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/appliance-types', applianceRoutes);
+app.use('/api/error-codes', errorCodeRoutes);
 
 // 404 handler
 app.use((req, res) => {

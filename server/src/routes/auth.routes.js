@@ -14,11 +14,8 @@ router.post('/register', upload.single('profileImage'), authController.register)
 // Login user
 router.post('/login', authController.login);
 
-// Forgot password
+// Forgot password (OTP)
 router.post('/forgot-password', authController.forgotPassword);
-
-// Reset password via Link (Legacy/Optional)
-router.patch('/reset-password/:token', authController.resetPassword);
 
 // Reset password via OTP (New)
 router.post('/reset-password-otp', authController.resetPasswordOTP);

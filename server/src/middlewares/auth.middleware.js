@@ -59,7 +59,10 @@ const isAuthenticated = async (req, res, next) => {
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.userRole)) {
+    // التحقق من الدور من التوكن أو من كائن المستخدم المرفق
+    const currentRole = req.user?.role || req.userRole;
+    
+    if (!roles.includes(currentRole)) {
       return res.status(403).json({
         status: 'fail',
         message: 'ليس لديك صلاحيات كافية للقيام بهذا الإجراء'
@@ -70,9 +73,9 @@ const authorize = (...roles) => {
 };
 
 /**
- * Check if user is customer
+ * Check if user is client
  */
-const isCustomer = authorize('customer');
+const isClient = authorize('client');
 
 /**
  * Check if user is technician
@@ -88,7 +91,7 @@ module.exports = {
   verifyToken,
   isAuthenticated,
   authorize,
-  isCustomer,
+  isClient,
   isTechnician,
   isAdmin
 }

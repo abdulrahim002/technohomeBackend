@@ -1,65 +1,77 @@
 const express = require('express');
 const router = express.Router();
 const serviceRequestController = require('../controllers/serviceRequest.controller');
-const { verifyToken, isAuthenticated, isCustomer , isTechnician } = require('../middlewares/auth.middleware');
+const { verifyToken, isAuthenticated, isClient } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
+const serviceRequestUpload = require('../middlewares/serviceRequestUpload.middleware');
+const City = require('../models/core/City.model');
+const ApplianceType = require('../models/ApplianceType.model');
+const Brand = require('../models/Brand.model');
+
+// مسار فحص الاتصال للتأكد من وصول طلبات الـ POST
+router.post('/ping', (req, res) => {
+  console.log('--- [DEBUG SERVER] PING RECEIVED ---', req.body);
+  res.status(200).json({ status: 'success', message: 'pong', body: req.body });
+});
 
 /**
- * Public Routes
- * راوتات العامة
+ * Lookups (Public Access: Used for Signup and General Reference)
  */
 
-// Find nearby technicians (Geo-filtering)
-// وظيفة البحث عن الفنيين القريبين
-router.get('/find-technicians', serviceRequestController.findNearbyTechnicians);
+// جلب قائمة الماركات المتوفرة (Samsung, LG, etc.)
+router.get('/lookups/brands', async (req, res) => {
+  const brands = await Brand.find({ isActive: true }).sort({ nameAr: 1 });
+  res.status(200).json({ status: 'success', data: { brands } });
+});
+
+// جلب قائمة الأجهزة المتوفرة والماركات
+router.get('/lookups/appliances', async (req, res) => {
+  const types = await ApplianceType.find().sort({ nameAr: 1 });
+  res.status(200).json({ status: 'success', data: { applianceTypes: types } });
+});
+
+// جلب قائمة المدن والمنطقة
+router.get('/lookups/cities', async (req, res) => {
+  const cities = await City.find().sort({ nameAr: 1 });
+  res.status(200).json({ status: 'success', data: { cities } });
+});
 
 /**
- * Customer Protected Routes
- * راوتات العميل المحمية 
+ * Client Protected Routes (For creating and managing requests)
  */
 
-// Create new service request
-// وظيفة إنشاء طلب صيانة جديد
-router.post('/', verifyToken, isAuthenticated, isCustomer, serviceRequestController.createServiceRequest);
+// تشخيص المشكلة فقط (JSON - بدون حجز، نظام السباق الذكي 20ث)
+router.post('/analyze', verifyToken, isAuthenticated, isClient, serviceRequestController.analyzeProblem);
 
-// Get my service requests
-// وظيفة الحصول على طلبات الصيانة الخاصة بي
-router.get('/my-requests', verifyToken, isAuthenticated, isCustomer, serviceRequestController.getMyServiceRequests);
+// إنشاء طلب صيانة جديد (حجز + تشخيص AI + صور)
+router.post('/', 
+  verifyToken, 
+  isAuthenticated, 
+  isClient, 
+  serviceRequestUpload.array('images', 5), 
+  serviceRequestController.createServiceRequest
+);
 
-// Get service request by ID
-// وظيفة الحصول على طلب صيانة معين
+// رفع صور الأعطال للطلب الحالي
+router.post('/upload-image', verifyToken, isAuthenticated, isClient, upload.single('image'), serviceRequestController.uploadImage);
+
+// جلب قائمة طلباتي (السجل)
+router.get('/my-requests', verifyToken, isAuthenticated, isClient, serviceRequestController.getMyServiceRequests);
+
+// اكتشاف الفنيين المناسبين للطلب الحالي
+router.get('/technicians/discover', verifyToken, isAuthenticated, isClient, serviceRequestController.discoverTechnicians);
+
+/**
+ * Shared Access Routes
+ */
+
+// عرض تفاصيل طلب معين بالمعرف
 router.get('/:id', verifyToken, isAuthenticated, serviceRequestController.getServiceRequestById);
 
-// Update service request
-// وظيفة تحديث طلب صيانة
-router.patch('/:id', verifyToken, isAuthenticated, isCustomer, serviceRequestController.updateServiceRequest);
+// إلغاء حجز الفني (إعادة الطلب لحالة التشخيص فقط)
+router.patch('/:id/reset-technician', verifyToken, isAuthenticated, isClient, serviceRequestController.resetTechnician);
 
-// Cancel service request
-// وظيفة إلغاء طلب صيانة
-router.post('/:id/cancel', verifyToken, isAuthenticated, isCustomer, serviceRequestController.cancelServiceRequest);
-
-// Rate service request
-// وظيفة تقييم طلب صيانة
-router.post('/:id/rate', verifyToken, isAuthenticated, isCustomer, serviceRequestController.rateServiceRequest);
-
-// Mark expert system (DIY) as complete
-// وظيفة إكمال نظام الصيانة الذاتية
-router.patch('/:id/expert-complete', verifyToken, isAuthenticated, isCustomer, serviceRequestController.completeExpertSystem);
-
-/**
- * Technician Protected Routes
- * راوتات الفني المحمية 
- */
-
-// Accept service request
-// وظيفة قبول طلب صيانة
-router.patch('/:id/accept', verifyToken, isAuthenticated, isTechnician, serviceRequestController.acceptRequest);
-
-// Start trip to customer
-// وظيفة بدء الرحلة إلى العميل
-router.patch('/:id/start-trip', verifyToken, isAuthenticated, isTechnician, serviceRequestController.startTrip);
-
-// Mark arrival at location
-// وظيفة تحديد الوصول إلى الموقع
-router.patch('/:id/arrive', verifyToken, isAuthenticated, isTechnician, serviceRequestController.arriveAtLocation);
+// حذف الطلب
+router.delete('/:id', verifyToken, isAuthenticated, isClient, serviceRequestController.deleteRequest);
 
 module.exports = router;

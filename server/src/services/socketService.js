@@ -3,43 +3,82 @@ const User = require('../models/User.model');
 
 let io;
 
+// Map لتتبع: userId -> Set of socketIds
+// يسمح بمعرفة من هو متصل حتى مع عدة أجهزة
+const userSocketMap = new Map(); // userId -> Set(socketId)
+const socketUserMap = new Map(); // socketId -> userId
+
 /**
  * تهيئة Socket.io وإدارة دورة حياة الاتصالات
  */
 const initSocket = (server) => {
   io = socketIO(server, {
     cors: {
-      origin: '*', // في الإنتاج يجب تحديد النطاق
+      origin: '*',
       methods: ['GET', 'POST']
     }
   });
 
   io.on('connection', (socket) => {
-    console.log('📡 New connection:', socket.id);
+    console.log('📡 Socket connected:', socket.id);
 
-    // الانضمام لغرفة خاصة بالمستخدم (باستخدام معرفه) لسحب التنبيهات لاحقاً
+    // ========================================
+    // 1. الانضمام لغرفة المستخدم + تحديث isOnline
+    // ========================================
     socket.on('join', async (userId) => {
-      if (userId) {
-        socket.join(userId);
-        console.log(`👤 User ${userId} joined their private room`);
-        
-        // تحديث حالة "متصل" في قاعدة البيانات
-        try {
-          await User.findByIdAndUpdate(userId, { isOnline: true });
-          // بث تحديث لجميع المتصلين (اختياري، حسب الحاجة)
-          io.emit('userStatusUpdate', { userId, isOnline: true });
-        } catch (error) {
-          console.error('Error updating online status:', error);
-        }
+      if (!userId) return;
+
+      socket.join(userId);
+      console.log(`👤 User ${userId} joined room`);
+
+      // ربط socketId بالـ userId
+      socketUserMap.set(socket.id, userId);
+
+      // إضافة socketId لمجموعة المستخدم
+      if (!userSocketMap.has(userId)) {
+        userSocketMap.set(userId, new Set());
+      }
+      userSocketMap.get(userId).add(socket.id);
+
+      // تحديث isOnline في قاعدة البيانات
+      try {
+        await User.findByIdAndUpdate(userId, { isOnline: true });
+        io.emit('userStatusUpdate', { userId, isOnline: true });
+        console.log(`✅ User ${userId} set to isOnline: true`);
+      } catch (error) {
+        console.error('Error updating online status:', error);
       }
     });
 
-    // عند انقطاع الاتصال
+    // ========================================
+    // 2. عند قطع الاتصال — تحديث isOnline
+    // ========================================
     socket.on('disconnect', async () => {
       console.log('🔌 Socket disconnected:', socket.id);
-      
-      // ملاحظة: هنا نحتاج لآلية لمعرفة أي مستخدم الذي انقطع اتصاله 
-      // سنقوم بتحسين هذا لاحقاً باستخدام تخزين مؤقت (Map) لمعرفات السوكت
+
+      const userId = socketUserMap.get(socket.id);
+      if (!userId) return;
+
+      // إزالة هذا socket من مجموعة المستخدم
+      const sockets = userSocketMap.get(userId);
+      if (sockets) {
+        sockets.delete(socket.id);
+
+        // إذا لم يتبقَ أي socket لهذا المستخدم → set isOnline: false
+        if (sockets.size === 0) {
+          userSocketMap.delete(userId);
+          try {
+            await User.findByIdAndUpdate(userId, { isOnline: false });
+            io.emit('userStatusUpdate', { userId, isOnline: false });
+            console.log(`❌ User ${userId} set to isOnline: false (all sockets disconnected)`);
+          } catch (error) {
+            console.error('Error updating offline status:', error);
+          }
+        }
+      }
+
+      // تنظيف الخريطة
+      socketUserMap.delete(socket.id);
     });
   });
 

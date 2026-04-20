@@ -8,10 +8,17 @@ const ServiceRequestSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'العميل مطلوب']
   },
-  device: {
+
+  // Appliance Information
+  applianceType: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Device',
-    required: [true, 'الجهاز مطلوب']
+    ref: 'ApplianceType',
+    required: [true, 'نوع الجهاز مطلوب']
+  },
+  brand: {
+    type: String, // يمكن تركه كـ String أو ربطه بموديل Brand لو رغبت
+    required: [true, 'ماركة الجهاز مطلوب'],
+    trim: true
   },
 
   // Problem Description
@@ -20,31 +27,35 @@ const ServiceRequestSchema = new mongoose.Schema({
     required: [true, 'وصف المشكلة مطلوب'],
     maxlength: [1000, 'وصف المشكلة لا يمكن أن يتجاوز 1000 حرف']
   },
-
-  // Error Code (for AI diagnosis)
-  errorCode: {
-    type: String,
-    trim: true
-  },
-  errorCodeImage: {
-    type: String // URL to the image of error code
+  images: {
+    type: [String],
+    default: []
   },
 
   // AI Diagnosis Result
   aiDiagnosis: {
-    suggestedProblem: String,
-    confidence: Number,
-    suggestions: [String]
+    diagnosis: String,
+    steps: [String]
   },
 
-  // Service Type
-  serviceType: {
+  // مصدر التشخيص (ai, manual, none)
+  diagnosisType: {
     type: String,
-    enum: ['regular', 'emergency'],
-    default: 'regular'
+    enum: ['ai', 'manual', 'none'],
+    default: 'none'
   },
 
-  // Assigned Technician
+  // Booking Details
+  bookingDate: {
+    type: Date,
+    default: Date.now // التاريخ الفعلي لإنشاء الطلب
+  },
+  scheduledDate: {
+    type: Date
+    // اختياري: يُحدد عند حجز فني
+  },
+
+  // Assigned Technician (اختياري: قد يكتفي العميل بالتشخيص دون حجز فني)
   technician: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -53,24 +64,17 @@ const ServiceRequestSchema = new mongoose.Schema({
   // Status
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'on_the_way', 'arrived', 'in_progress', 'completed', 'cancelled', 'rejected'],
+    required: true,
+    enum: ['diagnosed_only', 'waiting_for_confirmation', 'pending', 'accepted', 'completed', 'cancelled'],
     default: 'pending'
   },
 
   // Location
-  serviceLocation: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      default: [0, 0]
-    }
-  },
   serviceAddress: {
-    city: String,
+    cityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'City'
+    },
     street: String,
     building: String,
     floor: String,
@@ -78,62 +82,13 @@ const ServiceRequestSchema = new mongoose.Schema({
     notes: String
   },
 
-  // Scheduling
-  preferredDate: {
-    type: Date
-  },
-  scheduledDate: {
-    type: Date
-  },
-  completedDate: {
-    type: Date
-  },
-
-  // Pricing
-  estimatedPrice: {
-    type: Number,
-    min: 0
-  },
-  finalPrice: {
-    type: Number,
-    min: 0
-  },
-
-  // Payment
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'paid', 'partial', 'refunded'],
-    default: 'pending'
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['cash', 'card', 'online', 'wallet'],
-    default: 'cash'
-  },
-
-  // Technician Notes
-  technicianNotes: {
-    type: String,
-    maxlength: [1000, 'ملاحظات الفني لا يمكن أن تتجاوز 1000 حرف']
-  },
-
-  // Customer Rating
-  rating: {
-    type: Number,
-    min: 1,
-    max: 5
-  },
-  customerFeedback: {
-    type: String,
-    maxlength: [500, 'تعليق العميل لا يمكن أن يتجاوز 500 حرف']
-  },
-
-  // Images
-  images: [{
-    type: String
-  }],
-
   // Timeline
+  acceptedAt: {
+    type: Date
+  },
+  completedAt: {
+    type: Date
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -141,22 +96,10 @@ const ServiceRequestSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  },
-  acceptedAt: {
-    type: Date
-  },
-  startedAt: {
-    type: Date
-  },
-  completedAt: {
-    type: Date
   }
 }, {
   timestamps: true
 });
-
-// Index for geo-spatial queries
-ServiceRequestSchema.index({ serviceLocation: '2dsphere' });
 
 // Index for efficient querying
 ServiceRequestSchema.index({ customer: 1, status: 1 });
@@ -165,14 +108,6 @@ ServiceRequestSchema.index({ technician: 1, status: 1 });
 // Update updatedAt on save
 ServiceRequestSchema.pre('save', async function () {
   this.updatedAt = Date.now();
-});
-
-// Virtual for calculating duration
-ServiceRequestSchema.virtual('duration').get(function () {
-  if (this.startedAt && this.completedAt) {
-    return Math.round((this.completedAt - this.startedAt) / (1000 * 60)); // in minutes
-  }
-  return null;
 });
 
 const ServiceRequest = mongoose.model('ServiceRequest', ServiceRequestSchema);

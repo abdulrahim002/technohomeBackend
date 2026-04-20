@@ -40,8 +40,8 @@ const UserSchema = new mongoose.Schema({
   // Role & Status
   role: {
     type: String,
-    enum: ['customer', 'technician', 'admin'],
-    default: 'customer'
+    enum: ['client', 'technician', 'admin'],
+    default: 'client'
   },
   isActive: {
     type: Boolean,
@@ -70,22 +70,21 @@ const UserSchema = new mongoose.Schema({
       default: [0, 0]
     }
   },
+  city: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'City',
+    required: [true, 'المدينة مطلوبة']
+  },
   address: {
-    city: String,
     street: String,
     building: String,
     floor: String,
     apartment: String
   },
 
-  // Profile
   profileImage: {
     type: String,
     default: ''
-  },
-  bio: {
-    type: String,
-    maxlength: [500, 'النبذة لا يمكن أن تتجاوز 500 حرف']
   },
   fcmToken: {
     type: String,
@@ -128,6 +127,15 @@ const UserSchema = new mongoose.Schema({
 // Index for geo-spatial queries
 // الفهرس للاستعلامات الجغرافية
 UserSchema.index({ location: '2dsphere' });
+
+// Convert empty email to undefined so sparse unique index works
+// تحويل البريد الفارغ إلى undefined لكي يعمل الفهرس sparse بشكل صحيح
+UserSchema.pre('validate', function () {
+  if (this.email === '' || this.email === null) {
+    this.email = undefined;
+  }
+});
+
 
 // Hash password before saving
 // تشفير كلمة المرور قبل الحفظ

@@ -5,103 +5,33 @@ const { verifyToken, isAuthenticated, isAdmin } = require('../middlewares/auth.m
 
 /**
  * Admin Protected Routes
- * راوتات الادمن المحمية 
+ * جميع هذه المسارات محمية ولا يمكن الوصول إليها إلا بصلاحية Admin
  */
-
-// Apply admin middleware to all routes
-// تطبيق ميثود الادمن على جميع الراوتات
 router.use(verifyToken, isAuthenticated, isAdmin);
 
-/**
- * User Management
- * إدارة المستخدمين
- */
-
-// Get all users
-// وظيفة الحصول على جميع المستخدمين
+// إدارة المستخدمين
 router.get('/users', adminController.getAllUsers);
-
-// Toggle user status (suspend/unsuspend)
-// وظيفة تعطيل/تفعيل المستخدم
 router.post('/users/:userId/toggle-status', adminController.toggleUserStatus);
 
-// Verify user identity
-// وظيفة التحقق من هوية المستخدم
-router.post('/users/:userId/verify', adminController.verifyUser);
-
-// Reject/Un-verify user identity
-// وظيفة رفض هوية المستخدم
-router.post('/users/:userId/reject', adminController.rejectUser);
-
-// Manual Top-up for technician
-// وظيفة شحن رصيد الفني
-router.post('/users/:userId/top-up', adminController.manualTopUp);
-
-/**
- * Technician Management
- * إدارة الفنيين
- */
-
-// Get pending technician applications
-// وظيفة الحصول على طلبات الفنيين المعلقة
+// جلب الفنيين الذين ينتظرون التوثيق
 router.get('/technicians/pending', adminController.getPendingTechnicians);
+// توثيق فني معين (يتوافق مع الفرونت آند)
+router.post('/technicians/:id/approve', adminController.verifyTechnician);
+router.patch('/verify-technician/:id', adminController.verifyTechnician);
 
-// Approve technician
-// وظيفة الموافقة على الفني
-router.post('/technicians/:technicianId/approve', adminController.approveTechnician);
-
-// Reject technician
-// وظيفة رفض الفني
-router.post('/technicians/:technicianId/reject', adminController.rejectTechnician);
-
-/**
- * Service Request Management
- * إدارة طلبات الصيانة
- */
-
-// Get all service requests
-// وظيفة الحصول على جميع طلبات الصيانة
-router.get('/service-requests', adminController.getAllServiceRequests);
-
-/**
- * System Statistics
- * إحصائيات النظام
- */
-
-// Get system statistics
-// وظيفة الحصول على إحصائيات النظام
+// إحصائيات النظام
 router.get('/statistics', adminController.getStatistics);
 
-/**
- * Report Generation
- * إصدار التقارير
- */
-
-// Export Service Requests Report
-router.get('/reports/service-requests', adminController.exportServiceRequestsReport);
-
-// Export Financial Report
-router.get('/reports/financial', adminController.exportFinancialReport);
-
-/**
- * Appliance Types Management
- * إدارة أنواع الأجهزة
- */
-
-// Create appliance type
-// إنشاء نوع جهاز جديد
-router.post('/appliance-types', adminController.createApplianceType);
-
-// Get all appliance types
-// عرض جميع أنواع الأجهزة
+// إدارة أنواع الأجهزة
 router.get('/appliance-types', adminController.getAllApplianceTypes);
-
-// Update appliance type
-// تحديث نوع جهاز
+router.post('/appliance-types', adminController.createApplianceType);
 router.patch('/appliance-types/:id', adminController.updateApplianceType);
-
-// Delete appliance type
-// حذف نوع جهاز
 router.delete('/appliance-types/:id', adminController.deleteApplianceType);
+
+// إدارة الماركات (Brands)
+router.get('/brands', adminController.getAllBrands);
+router.post('/brands', adminController.createBrand);
+router.patch('/brands/:id', adminController.updateBrand);
+router.delete('/brands/:id', adminController.deleteBrand);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification.model');
 const User = require('../models/User.model');
+const { getIO } = require('./socketService');
 
 /**
  * دالة مساعدة لإنشاء وإرسال الإشعارات
@@ -41,7 +42,7 @@ exports.createNotification = async ({ recipientId, senderId, title, message, typ
 exports.notifyAdmins = async ({ senderId, title, message, type = 'system', relatedId }) => {
   try {
     const admins = await User.find({ role: 'admin', isActive: true });
-    
+
     // إنشاء إشعار لكل مسوؤل
     const notifications = admins.map(admin => ({
       recipient: admin._id,
@@ -52,7 +53,7 @@ exports.notifyAdmins = async ({ senderId, title, message, type = 'system', relat
       relatedId
     }));
 
-    if(notifications.length > 0){
+    if (notifications.length > 0) {
       await Notification.insertMany(notifications);
     }
   } catch (error) {
@@ -65,19 +66,24 @@ exports.notifyAdmins = async ({ senderId, title, message, type = 'system', relat
  */
 exports.notifyNearbyTechnicians = async ({ coordinates, maxDistanceInMeters = 15000, title, message, relatedId, senderId }) => {
   try {
+    console.log(`[notifyNearbyTechnicians] Searching with coordinates: [${coordinates}], radius: ${maxDistanceInMeters}m`);
+
     const nearbyTechnicians = await User.find({
       role: 'technician',
       isActive: true,
+      isVerified: true,    // فقط الفنيين المتحققين
       location: {
         $near: {
           $geometry: {
             type: "Point",
             coordinates: coordinates // [longitude, latitude]
           },
-          $maxDistance: maxDistanceInMeters // 15 km
+          $maxDistance: maxDistanceInMeters
         }
       }
     });
+
+    console.log(`[notifyNearbyTechnicians] Found ${nearbyTechnicians.length} nearby technicians`);
 
     const notifications = nearbyTechnicians.map(tech => ({
       recipient: tech._id,
@@ -90,6 +96,7 @@ exports.notifyNearbyTechnicians = async ({ coordinates, maxDistanceInMeters = 15
 
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
+      console.log(`[notifyNearbyTechnicians] Sent ${notifications.length} notifications`);
     }
   } catch (error) {
     console.error('Notify Nearby Technicians Failed:', error);
