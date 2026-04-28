@@ -1,4 +1,4 @@
-const TechnicianProfile = require('../models/TechnicianProfile.model');
+ const TechnicianProfile = require('../models/TechnicianProfile.model');
 const User = require('../models/User.model');
 
 /**
@@ -13,19 +13,26 @@ class TechnicianService {
    */
   async findTechniciansForBooking(applianceTypeId, cityId) {
     try {
-      // 1. البحث عن بروفايلات الفنيين الذين لديهم هذا التخصص وموثقين من الآدمن
-      const techProfiles = await TechnicianProfile.find({
-        specialties: applianceTypeId,
-        isVerified: true
-      }).populate({
+      // 1. البحث عن بروفايلات الفنيين (فلترة التخصص والتوثيق)
+      const query = {};
+      if (applianceTypeId) query.specialties = applianceTypeId;
+      
+      console.log(`[DEBUG] Finding techs for appliance: ${applianceTypeId}, city: ${cityId}`);
+
+      const techProfiles = await TechnicianProfile.find(query).populate({
         path: 'user',
         select: 'firstName lastName phone city profileImage',
-        match: { city: cityId } // الفلترة بالمدينة داخل كائن المستخدم
       });
 
-      // 2. تصفية النتائج (لأن populate قد يعيد null للمستخدمين الذين لا يطابقون المدينة)
+      // 2. تصفية النتائج يدوياً للتأكد من مطابقة المدينة (String vs ObjectId)
       const filteredTechs = techProfiles
-        .filter(profile => profile.user !== null)
+        .filter(profile => {
+          if (!profile.user) return false;
+          // تحويل المعرفات لنصوص للمقارنة الدقيقة
+          const userCity = profile.user.city?.toString();
+          const targetCity = cityId?.toString();
+          return !targetCity || userCity === targetCity;
+        })
         .map(profile => ({
           techId: profile.user._id,
           fullName: `${profile.user.firstName} ${profile.user.lastName}`,
@@ -38,6 +45,7 @@ class TechnicianService {
           profileImage: profile.profileImage
         }));
 
+      console.log(`[DEBUG] Found ${filteredTechs.length} technicians`);
       return filteredTechs;
     } catch (error) {
       console.error('Error finding technicians:', error);

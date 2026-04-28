@@ -84,7 +84,12 @@ exports.getMyServiceRequests = async (req, res, next) => {
  */
 exports.getServiceRequestById = async (req, res, next) => {
   try {
-    const request = await serviceRequestService.getRequestById(req.params.id, req.userId, req.userRole);
+    let request;
+    if (req.userRole === 'technician') {
+        request = await serviceRequestService.getTechnicianJobDetails(req.params.id, req.userId);
+    } else {
+        request = await serviceRequestService.getRequestDetails(req.params.id, req.userId);
+    }
     res.status(200).json({ status: 'success', data: { request } });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
@@ -127,4 +132,47 @@ exports.deleteRequest = async (req, res, next) => {
     if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
     next(error);
   }
+};
+
+/**
+ * --- Technician Actions ---
+ */
+
+exports.getTechnicianActiveJobs = async (req, res, next) => {
+    try {
+        const requests = await serviceRequestService.getTechnicianActiveJobs(req.userId);
+        res.status(200).json({ status: 'success', data: { count: requests.length, requests } });
+    } catch (error) { next(error); }
+};
+
+exports.acceptJob = async (req, res, next) => {
+    try {
+        const result = await serviceRequestService.acceptRequest(req.params.id, req.userId);
+        res.status(200).json({ status: 'success', message: 'تم قبول الطلب بنجاح', data: result });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+        next(error);
+    }
+};
+
+exports.updateJobStatus = async (req, res, next) => {
+    try {
+        const { status } = req.body;
+        const result = await serviceRequestService.updateJobStatus(req.params.id, req.userId, status);
+        res.status(200).json({ status: 'success', message: 'تم تحديث حالة الطلب', data: result });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+        next(error);
+    }
+};
+
+exports.completeJob = async (req, res, next) => {
+    try {
+        const { finalPrice, notes } = req.body;
+        const result = await serviceRequestService.completeJob(req.params.id, req.userId, finalPrice, notes);
+        res.status(200).json({ status: 'success', message: 'تم إتمام الصيانة بنجاح', data: result });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+        next(error);
+    }
 };

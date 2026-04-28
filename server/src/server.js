@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 
+
 // Load environment variables
 dotenv.config();
 
@@ -31,7 +32,7 @@ const { initSocket } = require('./services/socketService');
 initSocket(server);
 
 // Security middleware
-app.use(helmet());
+// app.use(helmet());
 
 // CORS configuration
 app.use(cors({
@@ -44,7 +45,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static folder for file uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -53,6 +54,18 @@ app.get('/api/health', (req, res) => {
     message: 'Techno Home API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Test uploads availability
+app.get('/api/test-uploads', (req, res) => {
+  const fs = require('fs');
+  const uploadsPath = path.join(__dirname, '../uploads/requests');
+  if (fs.existsSync(uploadsPath)) {
+    const files = fs.readdirSync(uploadsPath);
+    res.json({ status: 'success', path: uploadsPath, files });
+  } else {
+    res.json({ status: 'error', message: 'Path not found', path: uploadsPath });
+  }
 });
 
 // API Routes

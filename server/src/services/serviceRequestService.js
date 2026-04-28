@@ -237,6 +237,84 @@ class ServiceRequestService {
     await ServiceRequest.deleteOne({ _id: requestId });
     return { success: true };
   }
+
+  /**
+   * --- Technician Methods ---
+   */
+
+  /**
+   * جلب الطلبات النشطة للفني
+   */
+  async getTechnicianActiveJobs(techId) {
+    return await ServiceRequest.find({ 
+      technician: techId, 
+      status: { $in: ['waiting_for_confirmation', 'accepted', 'on_the_way', 'arrived', 'in_progress'] } 
+    })
+    .populate('customer', 'firstName lastName phone')
+    .populate('applianceType', 'nameAr')
+    .populate('serviceAddress.cityId', 'nameAr')
+    .sort({ scheduledDate: 1 });
+  }
+
+  /**
+   * جلب تفاصيل الطلب للفني (يتحقق من الملكية)
+   */
+  async getTechnicianJobDetails(requestId, techId) {
+    const request = await ServiceRequest.findOne({ _id: requestId, technician: techId })
+      .populate('customer', 'firstName lastName phone')
+      .populate('applianceType', 'nameAr')
+      .populate('serviceAddress.cityId', 'nameAr');
+
+    if (!request) throw { status: 404, message: 'المهمة غير موجودة أو لم تعد مسندة إليك' };
+    return request;
+  }
+
+  /**
+   * قبول طلب موجه للفني
+   */
+  async acceptRequest(requestId, techId) {
+    const request = await ServiceRequest.findOne({ _id: requestId, technician: techId });
+    if (!request) throw { status: 404, message: 'الطلب غير موجود' };
+    if (request.status !== 'waiting_for_confirmation') {
+      throw { status: 400, message: 'لا يمكن قبول الطلب في حالته الحالية' };
+    }
+
+    request.status = 'accepted';
+    request.acceptedAt = Date.now();
+    await request.save();
+    return request;
+  }
+
+  /**
+   * تحديث الحالة (في الطريق، وصل، جاري العمل)
+   */
+  async updateJobStatus(requestId, techId, status) {
+    const allowedStatuses = ['on_the_way', 'arrived', 'in_progress'];
+    if (!allowedStatuses.includes(status)) throw { status: 400, message: 'حالة غير صالحة' };
+
+    const request = await ServiceRequest.findOne({ _id: requestId, technician: techId });
+    if (!request) throw { status: 404, message: 'المهمة غير موجودة' };
+
+    request.status = status;
+    await request.save();
+    return request;
+  }
+
+  /**
+   * إتمام الصيانة
+   */
+  async completeJob(requestId, techId, finalPrice, notes) {
+    const request = await ServiceRequest.findOne({ _id: requestId, technician: techId });
+    if (!request) throw { status: 404, message: 'المهمة غير موجودة' };
+
+    request.status = 'completed';
+    request.completedAt = Date.now();
+    request.finalPrice = finalPrice;
+    request.technicianNotes = notes;
+    
+    await request.save();
+    return request;
+  }
 }
 
 module.exports = new ServiceRequestService();

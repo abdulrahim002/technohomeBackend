@@ -65,7 +65,17 @@ const ServiceRequestSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['diagnosed_only', 'waiting_for_confirmation', 'pending', 'accepted', 'completed', 'cancelled'],
+    enum: [
+      'diagnosed_only', 
+      'waiting_for_confirmation', 
+      'pending', 
+      'accepted', 
+      'on_the_way', 
+      'arrived', 
+      'in_progress', 
+      'completed', 
+      'cancelled'
+    ],
     default: 'pending'
   },
 
@@ -88,6 +98,12 @@ const ServiceRequestSchema = new mongoose.Schema({
   },
   completedAt: {
     type: Date
+  },
+  finalPrice: {
+    type: Number
+  },
+  technicianNotes: {
+    type: String
   },
   createdAt: {
     type: Date,
