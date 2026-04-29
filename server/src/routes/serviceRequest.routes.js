@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const serviceRequestController = require('../controllers/serviceRequest.controller');
+const reviewController = require('../controllers/review.controller');
 const { verifyToken, isAuthenticated, isClient, isTechnician } = require('../middlewares/auth.middleware');
 const upload = require('../middlewares/upload.middleware');
 const serviceRequestUpload = require('../middlewares/serviceRequestUpload.middleware');
@@ -41,6 +42,7 @@ router.post('/',
 
 router.get('/my-requests', verifyToken, isAuthenticated, isClient, serviceRequestController.getMyServiceRequests);
 router.get('/technicians/discover', verifyToken, isAuthenticated, isClient, serviceRequestController.discoverTechnicians);
+router.post('/:id/review', verifyToken, isAuthenticated, isClient, reviewController.submitReview);
 
 /**
  * --- Technician Protected Routes ---
@@ -49,6 +51,7 @@ router.get('/technician/active', verifyToken, isAuthenticated, isTechnician, ser
 router.patch('/:id/accept', verifyToken, isAuthenticated, isTechnician, serviceRequestController.acceptJob);
 router.patch('/:id/status', verifyToken, isAuthenticated, isTechnician, serviceRequestController.updateJobStatus);
 router.patch('/:id/complete', verifyToken, isAuthenticated, isTechnician, serviceRequestController.completeJob);
+router.delete('/:id/cancel', verifyToken, isAuthenticated, isTechnician, serviceRequestController.cancelJob);
 
 /**
  * --- Shared Protected Routes ---

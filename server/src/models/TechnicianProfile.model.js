@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+// ملف الفني
 const TechnicianProfileSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -25,6 +25,12 @@ const TechnicianProfileSchema = new mongoose.Schema({
     default: 0
   },
   
+  // Availability Switch
+  isAvailable: {
+    type: Boolean,
+    default: true
+  },
+  
   // Admin Verification
   isVerified: {
     type: Boolean,
@@ -37,6 +43,12 @@ const TechnicianProfileSchema = new mongoose.Schema({
     default: 4.8,
     min: 0,
     max: 5
+  },
+  reliabilityScore: {
+    type: Number,
+    default: 100,
+    min: 0,
+    max: 100
   },
   reviewCount: {
     type: Number,

@@ -1,4 +1,6 @@
-const serviceRequestService = require('../services/serviceRequestService');
+const orderCreationService = require('../services/order/orderCreationService');
+const clientOrderService = require('../services/order/clientOrderService');
+const technicianOrderService = require('../services/order/technicianOrderService');
 
 // ==========================================
 // وظائف العميل (Client Functions)
@@ -41,7 +43,7 @@ exports.createServiceRequest = async (req, res, next) => {
         : null,
     };
 
-    const result = await serviceRequestService.createRequest(requestData, req.userId);
+    const result = await orderCreationService.createRequest(requestData, req.userId);
     res.status(201).json({ 
       status: 'success', 
       message: 'تم حجز الطلب بنجاح في انتظار تأكيد الفني', 
@@ -58,7 +60,7 @@ exports.createServiceRequest = async (req, res, next) => {
  */
 exports.analyzeProblem = async (req, res, next) => {
   try {
-    const result = await serviceRequestService.analyzeOnly(req.body, req.userId);
+    const result = await orderCreationService.analyzeOnly(req.body, req.userId);
     if (result.limitReached) {
       return res.status(402).json({ status: 'fail', message: result.message });
     }
@@ -74,7 +76,7 @@ exports.analyzeProblem = async (req, res, next) => {
  */
 exports.getMyServiceRequests = async (req, res, next) => {
   try {
-    const requests = await serviceRequestService.getMyRequests(req.userId, req.query.status);
+    const requests = await clientOrderService.getMyRequests(req.userId);
     res.status(200).json({ status: 'success', data: { count: requests.length, requests } });
   } catch (error) { next(error); }
 };
@@ -86,9 +88,9 @@ exports.getServiceRequestById = async (req, res, next) => {
   try {
     let request;
     if (req.userRole === 'technician') {
-        request = await serviceRequestService.getTechnicianJobDetails(req.params.id, req.userId);
+        request = await technicianOrderService.getTechnicianJobDetails(req.params.id, req.userId);
     } else {
-        request = await serviceRequestService.getRequestDetails(req.params.id, req.userId);
+        request = await clientOrderService.getRequestDetails(req.params.id, req.userId);
     }
     res.status(200).json({ status: 'success', data: { request } });
   } catch (error) {
@@ -113,7 +115,7 @@ exports.uploadImage = async (req, res, next) => {
  */
 exports.resetTechnician = async (req, res, next) => {
   try {
-    const result = await serviceRequestService.resetTechnician(req.params.id, req.userId);
+    const result = await clientOrderService.resetTechnician(req.params.id, req.userId);
     res.status(200).json({ status: 'success', message: 'تم إلغاء الحجز، الطلب الآن في قائمة التشخيصات', data: result });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
@@ -126,7 +128,7 @@ exports.resetTechnician = async (req, res, next) => {
  */
 exports.deleteRequest = async (req, res, next) => {
   try {
-    const result = await serviceRequestService.deleteRequest(req.params.id, req.userId);
+    const result = await clientOrderService.deleteRequest(req.params.id, req.userId);
     res.status(200).json({ status: 'success', message: 'تم حذف الطلب بنجاح' });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
@@ -140,14 +142,14 @@ exports.deleteRequest = async (req, res, next) => {
 
 exports.getTechnicianActiveJobs = async (req, res, next) => {
     try {
-        const requests = await serviceRequestService.getTechnicianActiveJobs(req.userId);
+        const requests = await technicianOrderService.getTechnicianActiveJobs(req.userId);
         res.status(200).json({ status: 'success', data: { count: requests.length, requests } });
     } catch (error) { next(error); }
 };
 
 exports.acceptJob = async (req, res, next) => {
     try {
-        const result = await serviceRequestService.acceptRequest(req.params.id, req.userId);
+        const result = await technicianOrderService.acceptRequest(req.params.id, req.userId);
         res.status(200).json({ status: 'success', message: 'تم قبول الطلب بنجاح', data: result });
     } catch (error) {
         if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
@@ -157,8 +159,8 @@ exports.acceptJob = async (req, res, next) => {
 
 exports.updateJobStatus = async (req, res, next) => {
     try {
-        const { status } = req.body;
-        const result = await serviceRequestService.updateJobStatus(req.params.id, req.userId, status);
+        const { status, techLocation } = req.body;
+        const result = await technicianOrderService.updateJobStatus(req.params.id, req.userId, status, techLocation);
         res.status(200).json({ status: 'success', message: 'تم تحديث حالة الطلب', data: result });
     } catch (error) {
         if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
@@ -168,9 +170,22 @@ exports.updateJobStatus = async (req, res, next) => {
 
 exports.completeJob = async (req, res, next) => {
     try {
-        const { finalPrice, notes } = req.body;
-        const result = await serviceRequestService.completeJob(req.params.id, req.userId, finalPrice, notes);
+        const { finalPrice, notes, otp } = req.body;
+        const result = await technicianOrderService.completeJob(req.params.id, req.userId, finalPrice, notes, otp);
         res.status(200).json({ status: 'success', message: 'تم إتمام الصيانة بنجاح', data: result });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+        next(error);
+    }
+};
+
+/**
+ * إلغاء الطلب من قبل الفني (تطبيق عقوبة)
+ */
+exports.cancelJob = async (req, res, next) => {
+    try {
+        const result = await technicianOrderService.cancelJob(req.params.id, req.userId);
+        res.status(200).json({ status: 'success', message: 'تم إلغاء المهمة وتطبيق خصم الموثوقية', data: result });
     } catch (error) {
         if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
         next(error);

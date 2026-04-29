@@ -10,6 +10,8 @@ router.get('/profile',          verifyToken, isAuthenticated, userController.get
 router.patch('/profile',        verifyToken, isAuthenticated, userController.updateUserProfile);
 router.patch('/location',       verifyToken, isAuthenticated, userController.updateLocation);
 router.patch('/fcm-token',      verifyToken, isAuthenticated, userController.updateFcmToken);
+router.get('/wallet/history',    verifyToken, isAuthenticated, userController.getWalletHistory);
+router.get('/wallet/export',     verifyToken, isAuthenticated, userController.exportMyWallet);
 
 // البحث عن الفنيين (للعملاء)
 router.get('/technicians',      verifyToken, isAuthenticated, userController.listTechniciansForBooking);
@@ -18,6 +20,7 @@ router.get('/technicians',      verifyToken, isAuthenticated, userController.lis
 // Technician
 // ==========================================
 router.get('/technician-profile',  verifyToken, isAuthenticated, isTechnician, userController.getTechnicianProfile);
+router.patch('/technician/availability', verifyToken, isAuthenticated, isTechnician, userController.toggleAvailability);
 router.post('/onboarding',         verifyToken, isAuthenticated, isTechnician, userController.completeTechnicianOnboarding);
 
 // ==========================================

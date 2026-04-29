@@ -4,6 +4,8 @@ const ServiceRequest = require('../models/ServiceRequest.model');
 const ApplianceType = require('../models/ApplianceType.model');
 const Brand = require('../models/Brand.model');
 const City = require('../models/core/City.model');
+const transactionService = require('../services/transactionService');
+const reportExportService = require('../services/reportExportService');
 
 // ==========================================
 // 1. إدارة المستخدمين والفنيين
@@ -69,6 +71,17 @@ exports.toggleUserStatus = async (req, res, next) => {
     user.isActive = !user.isActive;
     await user.save();
     res.status(200).json({ status: 'success', message: 'تم تغيير حالة الحساب' });
+  } catch (error) { next(error); }
+};
+
+/**
+ * شحن محفظة فني
+ */
+exports.chargeTechnicianWallet = async (req, res, next) => {
+  try {
+    const { techId, amount } = req.body;
+    const transaction = await transactionService.chargeWallet(req.userId, techId, amount);
+    res.status(200).json({ status: 'success', message: 'تم شحن المحفظة بنجاح', data: { transaction } });
   } catch (error) { next(error); }
 };
 
@@ -179,5 +192,36 @@ exports.getStatistics = async (req, res, next) => {
         requests: { total: r, completed: c } 
       } 
     });
+  } catch (error) { next(error); }
+};
+
+/**
+ * جلب قائمة أفضل الفنيين حسب التقييم والموثوقية
+ */
+exports.getTopTechnicians = async (req, res, next) => {
+  try {
+    const topTechs = await TechnicianProfile.find({ isVerified: true })
+      .populate('user', 'firstName lastName phone profileImage')
+      .sort({ rating: -1, reliabilityScore: -1 })
+      .limit(10)
+      .lean();
+
+    res.status(200).json({ status: 'success', data: { technicians: topTechs } });
+  } catch (error) { next(error); }
+};
+
+/**
+ * تصدير كشف حساب مالي لفني (Excel)
+ */
+exports.exportTechnicianWallet = async (req, res, next) => {
+  try {
+    const { techId } = req.params;
+    const workbook = await reportExportService.exportWalletToExcel(techId);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=wallet_statement_${techId}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) { next(error); }
 };

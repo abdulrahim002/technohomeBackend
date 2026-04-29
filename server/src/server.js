@@ -10,11 +10,18 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Initialize Firebase
+const { initializeFirebase } = require('./config/firebase');
+initializeFirebase();
+
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const serviceRequestRoutes = require('./routes/serviceRequest.routes.js');
 const adminRoutes = require('./routes/admin.routes');
 const errorCodeRoutes = require('./routes/errorCode.routes');
+const userRoutes = require('./routes/user.routes');
+const reportRoutes = require('./routes/report.routes');
+const chatRoutes = require('./routes/chat.routes');
 
 // Import error handler
 const errorHandler = require('./middlewares/errorHandler');
@@ -73,6 +80,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/error-codes', errorCodeRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404 handler
 app.use((req, res) => {

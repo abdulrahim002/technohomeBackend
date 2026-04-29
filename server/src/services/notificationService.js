@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification.model');
 const User = require('../models/User.model');
 const { getIO } = require('./socketService');
+const fcmService = require('./fcmService');
 
 /**
  * دالة مساعدة لإنشاء وإرسال الإشعارات
@@ -23,11 +24,16 @@ exports.createNotification = async ({ recipientId, senderId, title, message, typ
       relatedId
     });
 
-    // لاحقاً: يمكن إضافة إرسال إشعار الدفع الفوري (Push Notification) عبر خدمة כמו Firebase Cloud Messaging (FCM)
-    // const user = await User.findById(recipientId);
-    // if(user && user.fcmToken) {
-    //    sendFCM(user.fcmToken, title, message);
-    // }
+    // إرسال إشعار الدفع الفوري (Push Notification) عبر FCM
+    const recipient = await User.findById(recipientId).select('fcmToken');
+    if (recipient && recipient.fcmToken) {
+      await fcmService.sendPushNotification(
+        recipient.fcmToken,
+        title,
+        message,
+        { type, relatedId: relatedId ? relatedId.toString() : '' }
+      );
+    }
 
     return notification;
   } catch (error) {
@@ -97,6 +103,20 @@ exports.notifyNearbyTechnicians = async ({ coordinates, maxDistanceInMeters = 15
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
       console.log(`[notifyNearbyTechnicians] Sent ${notifications.length} notifications`);
+
+      // إرسال إشعارات دفع للفنيين القريبين
+      const tokens = nearbyTechnicians
+        .map(tech => tech.fcmToken)
+        .filter(token => token); // فقط الذين لديهم توكن
+        
+      if (tokens.length > 0) {
+        await fcmService.sendMulticastNotification(
+          tokens,
+          title,
+          message,
+          { type: 'order', relatedId: relatedId ? relatedId.toString() : '' }
+        );
+      }
     }
   } catch (error) {
     console.error('Notify Nearby Technicians Failed:', error);

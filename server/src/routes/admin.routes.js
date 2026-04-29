@@ -9,9 +9,10 @@ const { verifyToken, isAuthenticated, isAdmin } = require('../middlewares/auth.m
  */
 router.use(verifyToken, isAuthenticated, isAdmin);
 
-// إدارة المستخدمين
+// إدارة المستخدمين والمحافظ
 router.get('/users', adminController.getAllUsers);
 router.post('/users/:userId/toggle-status', adminController.toggleUserStatus);
+router.post('/wallet/charge', adminController.chargeTechnicianWallet);
 
 // جلب الفنيين الذين ينتظرون التوثيق
 router.get('/technicians/pending', adminController.getPendingTechnicians);
@@ -19,8 +20,10 @@ router.get('/technicians/pending', adminController.getPendingTechnicians);
 router.post('/technicians/:id/approve', adminController.verifyTechnician);
 router.patch('/verify-technician/:id', adminController.verifyTechnician);
 
-// إحصائيات النظام
+// إحصائيات النظام والتقارير المتقدمة
 router.get('/statistics', adminController.getStatistics);
+router.get('/insights/top-technicians', adminController.getTopTechnicians);
+router.get('/export/wallet/:techId', adminController.exportTechnicianWallet);
 
 // إدارة أنواع الأجهزة
 router.get('/appliance-types', adminController.getAllApplianceTypes);

@@ -1,5 +1,6 @@
 const socketIO = require('socket.io');
 const User = require('../models/User.model');
+const chatService = require('./chatService');
 
 let io;
 
@@ -47,6 +48,37 @@ const initSocket = (server) => {
         console.log(`✅ User ${userId} set to isOnline: true`);
       } catch (error) {
         console.error('Error updating online status:', error);
+      }
+    });
+
+    // ========================================
+    // 2. إدارة المحادثة الفورية (Chat)
+    // ========================================
+    socket.on('sendMessage', async (data) => {
+      const { serviceRequest, recipientId, content, messageType } = data;
+      const senderId = socketUserMap.get(socket.id);
+
+      if (!senderId || !recipientId || !content) return;
+
+      try {
+        // 1. حفظ في قاعدة البيانات (سيقوم أيضاً بإرسال Push إذا كان الطرف الآخر غير متصل بالسوكت)
+        const savedMsg = await chatService.saveMessage({
+          serviceRequest,
+          senderId,
+          recipientId,
+          content,
+          messageType: messageType || 'text'
+        });
+
+        // 2. إرسال عبر السوكت للطرف الآخر (إذا كان متصلاً)
+        io.to(recipientId).emit('receiveMessage', savedMsg);
+        
+        // 3. تأكيد الإرسال للمرسل (اختياري، لضمان وصولها للسيرفر)
+        socket.emit('messageSent', savedMsg);
+        
+      } catch (error) {
+        console.error('Chat Error:', error);
+        socket.emit('error', { message: 'فشل في إرسال الرسالة' });
       }
     });
 

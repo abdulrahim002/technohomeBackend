@@ -3,6 +3,8 @@ const User = require('../models/User.model');
 const TechnicianProfile = require('../models/TechnicianProfile.model');
 const ServiceRequest = require('../models/ServiceRequest.model');
 const ApplianceType = require('../models/ApplianceType.model');
+const transactionService = require('../services/transactionService');
+const reportExportService = require('../services/reportExportService');
 
 // ==========================================
 // Profile
@@ -56,6 +58,19 @@ exports.getTechnicianProfile = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+exports.toggleAvailability = async (req, res, next) => {
+  try {
+    const { isAvailable } = req.body;
+    const profile = await TechnicianProfile.findOneAndUpdate(
+      { user: req.userId },
+      { isAvailable },
+      { new: true }
+    );
+    if (!profile) return res.status(404).json({ status: 'fail', message: 'ملف الفني غير موجود' });
+    res.status(200).json({ status: 'success', message: 'تم تحديث حالة التواجد بنجاح', data: { isAvailable: profile.isAvailable } });
+  } catch (error) { next(error); }
+};
+
 /**
  * إكمال بيانات الفني (Onboarding)
  * يستقبل: specialties[] (ApplianceType IDs), experienceYears, city, profileImage
@@ -76,7 +91,7 @@ exports.completeTechnicianOnboarding = async (req, res, next) => {
       {
         specialties: specialties || [],
         experienceYears: Number(experienceYears) || 0,
-        verificationStatus: 'pending',
+        isVerified: false,
         ...(city && { serviceAreas: [{ city }] }),
       },
       { new: true }
@@ -109,10 +124,11 @@ exports.listTechniciansForBooking = async (req, res, next) => {
     const techUsers = await User.find(userQuery).select('_id');
     const userIds = techUsers.map(u => u._id);
 
-    // 2. جلب البروفايلات الموثقة فقط
+    // 2. جلب البروفايلات الموثقة فقط والمتاحة
     const profileQuery = {
       user: { $in: userIds },
-      verificationStatus: 'verified',
+      isVerified: true,
+      isAvailable: true,
     };
 
     // إضافة فلتر التخصص (ApplianceType ID)
@@ -148,5 +164,31 @@ exports.getUserById = async (req, res, next) => {
     const user = await User.findById(req.params.userId || req.params.id);
     if (!user) return res.status(404).json({ status: 'fail', message: 'المستخدم غير موجود' });
     res.status(200).json({ status: 'success', data: { user } });
+  } catch (error) { next(error); }
+};
+
+/**
+ * الحصول على سجل المعاملات المالية
+ */
+exports.getWalletHistory = async (req, res, next) => {
+  try {
+    const { page, limit } = req.query;
+    const history = await transactionService.getUserHistory(req.userId, page, limit);
+    res.status(200).json({ status: 'success', data: history });
+  } catch (error) { next(error); }
+};
+
+/**
+ * تصدير سجل المحفظة الخاص بي (Excel)
+ */
+exports.exportMyWallet = async (req, res, next) => {
+  try {
+    const workbook = await reportExportService.exportWalletToExcel(req.userId);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=my_wallet_statement.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) { next(error); }
 };

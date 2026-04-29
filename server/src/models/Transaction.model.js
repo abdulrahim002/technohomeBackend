@@ -1,42 +1,39 @@
-//ملف نموذج المعاملة  
 const mongoose = require('mongoose');
 
 const TransactionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'المستخدم مطلوب']
-  },
-  amount: {
-    type: Number,
-    required: [true, 'المبلغ مطلوب']
+    required: true
   },
   type: {
     type: String,
-    enum: ['top-up', 'commission_deduction'],
-    required: [true, 'نوع المعاملة مطلوب']
+    enum: ['credit', 'debit', 'refund'],
+    required: true
   },
-  status: {
-    type: String,
-    enum: ['pending', 'completed', 'failed'],
-    default: 'completed'
+  amount: {
+    type: Number,
+    required: true
+  },
+  balanceAfter: {
+    type: Number,
+    required: true
   },
   description: {
     type: String,
-    trim: true
+    required: true
   },
-  relatedId: {
+  referenceId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'ServiceRequest'
+    // Can refer to ServiceRequest, Report, or an Admin ID who recharged
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  referenceModel: {
+    type: String,
+    enum: ['ServiceRequest', 'Report', 'User', 'System']
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-const Transaction = mongoose.model('Transaction', TransactionSchema);
+// Indexing for faster history lookups
+TransactionSchema.index({ user: 1, createdAt: -1 });
 
-module.exports = Transaction;
+module.exports = mongoose.model('Transaction', TransactionSchema);

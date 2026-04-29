@@ -61,19 +61,25 @@ const ServiceRequestSchema = new mongoose.Schema({
     ref: 'User'
   },
 
+  // Security & Financial
+  closingOTP: {
+    type: String // رمز الإغلاق (OTP)
+  },
+  commissionDeducted: {
+    type: Number,
+    default: 0 // العمولة المخصومة
+  },
+
   // Status
   status: {
     type: String,
     required: true,
     enum: [
-      'diagnosed_only', 
-      'waiting_for_confirmation', 
-      'pending', 
-      'accepted', 
-      'on_the_way', 
-      'arrived', 
-      'in_progress', 
-      'completed', 
+      'diagnosed_only',
+      'pending', // بانتظار قبول الفني
+      'accepted', // تم القبول (وخصم العمولة)
+      'arrived', // الفني وصل للموقع
+      'completed', // تمت الصيانة (بإدخال الـ OTP)
       'cancelled'
     ],
     default: 'pending'
@@ -84,6 +90,17 @@ const ServiceRequestSchema = new mongoose.Schema({
     cityId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'City'
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        required: true
+      }
     },
     street: String,
     building: String,
@@ -120,6 +137,8 @@ const ServiceRequestSchema = new mongoose.Schema({
 // Index for efficient querying
 ServiceRequestSchema.index({ customer: 1, status: 1 });
 ServiceRequestSchema.index({ technician: 1, status: 1 });
+// الفهرس للاستعلامات الجغرافية
+ServiceRequestSchema.index({ 'serviceAddress.location': '2dsphere' });
 
 // Update updatedAt on save
 ServiceRequestSchema.pre('save', async function () {
