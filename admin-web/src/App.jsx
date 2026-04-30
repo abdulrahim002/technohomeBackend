@@ -35,7 +35,7 @@ function App() {
 
   return (
     <Router>
-      <div className="flex bg-[#0F172A] min-h-screen text-white font-outfit">
+      <div className="flex bg-[#F8FAFC] min-h-screen text-slate-900 font-outfit">
         {/* Fixed Sidebar */}
         <Sidebar onLogout={handleLogout} />
 

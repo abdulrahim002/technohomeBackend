@@ -61,9 +61,20 @@ class OrderCreationService {
     }
 
     let finalServiceAddress = serviceAddress || {};
-    if (!finalServiceAddress.cityId) {
-      const user = await User.findById(userId);
-      if (user && user.city) finalServiceAddress.cityId = user.city;
+    const user = await User.findById(userId);
+    
+    if (!finalServiceAddress.cityId && user && user.city) {
+      finalServiceAddress.cityId = user.city;
+    }
+
+    // Fix for Validation Error: coordinates are required
+    if (!finalServiceAddress.location || !finalServiceAddress.location.coordinates) {
+      finalServiceAddress.location = {
+        type: 'Point',
+        coordinates: (user && user.location && user.location.coordinates) 
+          ? user.location.coordinates 
+          : [0, 0]
+      };
     }
 
     const requestData = {

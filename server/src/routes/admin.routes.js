@@ -14,8 +14,9 @@ router.get('/users', adminController.getAllUsers);
 router.post('/users/:userId/toggle-status', adminController.toggleUserStatus);
 router.post('/wallet/charge', adminController.chargeTechnicianWallet);
 
-// جلب الفنيين الذين ينتظرون التوثيق
+// جلب الفنيين حسب الحالة
 router.get('/technicians/pending', adminController.getPendingTechnicians);
+router.get('/technicians/verified', adminController.getVerifiedTechnicians);
 // توثيق فني معين (يتوافق مع الفرونت آند)
 router.post('/technicians/:id/approve', adminController.verifyTechnician);
 router.patch('/verify-technician/:id', adminController.verifyTechnician);

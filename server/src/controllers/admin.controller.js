@@ -33,15 +33,27 @@ exports.getAllUsers = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-/**
- * جلب قائمة الفنيين الذين ينتظرون التوثيق
- */
 exports.getPendingTechnicians = async (req, res, next) => {
   try {
     const technicians = await TechnicianProfile.find({ isVerified: false })
       .populate('user', 'firstName lastName phone city profileImage')
       .populate('specialties', 'nameAr')
       .populate('brands', 'nameAr');
+
+    res.status(200).json({ status: 'success', data: { count: technicians.length, technicians } });
+  } catch (error) { next(error); }
+};
+
+/**
+ * جلب قائمة الفنيين المعتمدين (كامل البيانات)
+ */
+exports.getVerifiedTechnicians = async (req, res, next) => {
+  try {
+    const technicians = await TechnicianProfile.find({ isVerified: true })
+      .populate('user', 'firstName lastName phone city profileImage walletBalance')
+      .populate('specialties', 'nameAr')
+      .populate('brands', 'nameAr')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({ status: 'success', data: { count: technicians.length, technicians } });
   } catch (error) { next(error); }
@@ -179,17 +191,34 @@ exports.deleteBrand = async (req, res, next) => {
 
 exports.getStatistics = async (req, res, next) => {
   try {
-    const [u, t, r, c] = await Promise.all([
+    const [u, t, r, c, rev] = await Promise.all([
       User.countDocuments(), 
       User.countDocuments({ role: 'technician' }),
       ServiceRequest.countDocuments(), 
-      ServiceRequest.countDocuments({ status: 'completed' })
+      ServiceRequest.countDocuments({ status: 'completed' }),
+      ServiceRequest.aggregate([
+        { $group: { _id: null, total: { $sum: "$commissionDeducted" } } }
+      ])
     ]);
+    
+    // Get recent transactions total
+    const systemLiquidity = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$walletBalance" } } }
+    ]);
+
     res.status(200).json({ 
       status: 'success', 
       data: { 
         users: { total: u, technicians: t }, 
-        requests: { total: r, completed: c } 
+        serviceRequests: { total: r, completed: c },
+        financials: {
+          totalRevenue: rev[0]?.total || 0,
+          systemLiquidity: systemLiquidity[0]?.total || 0
+        },
+        system: {
+          brands: await Brand.countDocuments(),
+          applianceTypes: await ApplianceType.countDocuments()
+        }
       } 
     });
   } catch (error) { next(error); }

@@ -42,7 +42,7 @@ const ServiceRequests = () => {
       {/* العنوان + فلتر */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-white font-outfit">سجل الطلبات</h2>
+          <h2 className="text-3xl font-black text-slate-900 font-outfit">سجل الطلبات</h2>
           <p className="text-slate-400 text-sm font-bold mt-1">جميع طلبات الصيانة في المنصة</p>
         </div>
 
@@ -54,8 +54,8 @@ const ServiceRequests = () => {
               onClick={() => setFilter(s)}
               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
                 ${filter === s
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                  : 'bg-white/5 text-slate-500 hover:text-white border border-white/5'}`}
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                  : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'}`}
             >
               {s === 'all' ? 'الكل' : STATUS[s]?.label || s}
             </button>
@@ -67,19 +67,19 @@ const ServiceRequests = () => {
       <p className="text-slate-500 text-xs font-bold">{filtered.length} طلب</p>
 
       {/* الجدول */}
-      <div className="glass rounded-[28px] overflow-hidden border border-white/5">
+      <div className="glass rounded-[28px] overflow-hidden border border-slate-200">
         <table className="w-full text-right">
           <thead>
-            <tr className="bg-white/[0.02] border-b border-white/5">
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">السعر</th>
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">الحالة</th>
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">التاريخ</th>
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">الجهاز</th>
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">العميل</th>
-              <th className="px-6 py-4 text-slate-500 font-black text-[10px] uppercase tracking-widest">#</th>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">السعر</th>
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">الحالة</th>
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">التاريخ</th>
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">الجهاز</th>
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">العميل</th>
+              <th className="px-6 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">#</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.02]">
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               [1, 2, 3].map(i => (
                 <tr key={i}>
@@ -94,8 +94,8 @@ const ServiceRequests = () => {
               </tr>
             ) : (
               filtered.map((req) => (
-                <tr key={req._id} className="hover:bg-white/[0.01] transition-all">
-                  <td className="px-6 py-5 text-white font-black text-sm">
+                <tr key={req._id} className="hover:bg-slate-50 transition-all">
+                  <td className="px-6 py-5 text-slate-900 font-black text-sm">
                     {req.finalPrice ? `${req.finalPrice} د.ل` : '—'}
                   </td>
                   <td className="px-6 py-5">
@@ -106,13 +106,13 @@ const ServiceRequests = () => {
                   <td className="px-6 py-5 text-slate-400 text-xs font-bold">
                     {new Date(req.createdAt).toLocaleDateString('ar-EG')}
                   </td>
-                  <td className="px-6 py-5 text-white font-bold text-sm">
+                  <td className="px-6 py-5 text-slate-900 font-bold text-sm">
                     {req.device?.name || 'غير محدد'}
                   </td>
-                  <td className="px-6 py-5 text-white font-bold text-sm">
+                  <td className="px-6 py-5 text-slate-900 font-bold text-sm">
                     {req.customer?.firstName} {req.customer?.lastName}
                   </td>
-                  <td className="px-6 py-5 text-slate-500 font-bold text-xs">
+                  <td className="px-6 py-5 text-slate-400 font-bold text-xs">
                     #{req._id?.slice(-6).toUpperCase()}
                   </td>
                 </tr>

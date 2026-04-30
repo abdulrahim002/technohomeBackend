@@ -5,43 +5,60 @@
 @tailwind utilities;
 
 :root {
-  --primary: #3b82f6;
-  --secondary: #6366f1;
-  --bg-dark: #0f172a;
+  --primary: #4F46E5; /* Indigo */
+  --secondary: #10B981; /* Emerald */
+  --bg-main: #F8FAFC; /* Slate 50 */
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-dark);
-  color: white;
+  background-color: var(--bg-main);
+  color: #1E293B;
   font-family: 'Outfit', sans-serif;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.1) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #CBD5E1;
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94A3B8;
 }
 
 @layer components {
   .glass {
-    @apply bg-slate-900/80 backdrop-blur-xl border border-white/5;
+    @apply bg-white/90 backdrop-blur-xl border border-slate-200;
   }
   
   .glass-card {
-    @apply bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-[24px] transition-all duration-300 hover:bg-slate-800/60 hover:border-blue-500/30 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/20;
+    @apply bg-white border border-slate-100 rounded-[32px] transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.03);
+  }
+
+  .admin-sidebar {
+    @apply w-72 bg-white border-l border-slate-100 h-screen fixed right-0 top-0 z-40;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-4 px-6 py-4 mx-4 my-1 rounded-2xl font-bold text-sm transition-all;
+  }
+
+  .nav-item-active {
+    @apply bg-indigo-50 text-indigo-600;
+  }
+
+  .nav-item-inactive {
+    @apply text-slate-400 hover:bg-slate-50 hover:text-slate-600;
   }
 }

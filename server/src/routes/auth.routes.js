@@ -31,6 +31,9 @@ router.get('/me', verifyToken, isAuthenticated, authController.getMe);
 router.post('/refresh-token', verifyToken, isAuthenticated, authController.refreshToken);
 
 // Change password
-router.post('/change-password', verifyToken, isAuthenticated, authController.changePassword);
+router.patch('/change-password', verifyToken, isAuthenticated, authController.changePassword);
+
+// Update profile
+router.patch('/update-profile', verifyToken, isAuthenticated, authController.updateProfile);
 
 module.exports = router;

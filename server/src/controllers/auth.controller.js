@@ -183,6 +183,33 @@ exports.changePassword = async (req, res, next) => {
 };
 
 // ==========================================
+// Update Profile
+// ==========================================
+
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { firstName, lastName, phone, city } = req.body;
+    
+    // منع تغيير الحقول الحساسة
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (phone) updateData.phone = phone;
+    if (city) updateData.city = city;
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).populate('city', 'nameAr');
+
+    if (!user) return res.status(404).json({ status: 'fail', message: 'المستخدم غير موجود' });
+
+    res.status(200).json({ status: 'success', data: user });
+  } catch (error) { next(error); }
+};
+
+// ==========================================
 // Forgot Password (OTP)
 // ==========================================
 

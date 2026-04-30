@@ -104,8 +104,8 @@ const ErrorCodes = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-black text-white mb-2 font-outfit tracking-tight">إدارة أكواد الأعطال</h2>
-          <p className="text-slate-400 font-bold text-sm">أضف شروحات الأكواد لكل ماركة وجهاز لتسهيل التشخيص للمستخدمين</p>
+          <h2 className="text-3xl font-black text-black mb-2 font-outfit tracking-tight">إدارة أكواد الأعطال</h2>
+          <p className="text-black font-bold text-sm">أضف شروحات الأكواد لكل ماركة وجهاز لتسهيل التشخيص للمستخدمين</p>
         </div>
         <button 
           onClick={() => {
@@ -126,7 +126,7 @@ const ErrorCodes = () => {
         <input 
           type="text"
           placeholder="ابحث عن كود، جهاز، أو ماركة..."
-          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pr-12 pl-4 text-white font-bold focus:border-blue-500/50 focus:outline-none transition-all"
+          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pr-12 pl-4 text-black font-bold focus:border-blue-500/50 focus:outline-none transition-all"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -150,9 +150,9 @@ const ErrorCodes = () => {
             ) : filteredCodes.map((c) => (
               <tr key={c._id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                 <td className="px-6 py-4 font-black text-blue-400 font-outfit uppercase">{c.code}</td>
-                <td className="px-6 py-4 font-bold text-white">{c.deviceId?.nameAr}</td>
-                <td className="px-6 py-4 font-bold text-slate-400">{c.brandId?.nameAr}</td>
-                <td className="px-6 py-4 font-medium text-slate-300 max-w-xs truncate">{c.description}</td>
+                <td className="px-6 py-4 font-bold text-black">{c.deviceId?.nameAr}</td>
+                <td className="px-6 py-4 font-bold text-black">{c.brandId?.nameAr}</td>
+                <td className="px-6 py-4 font-medium text-black max-w-xs truncate">{c.description}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => openEditModal(c)} className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all">
@@ -186,7 +186,7 @@ const ErrorCodes = () => {
                    <button onClick={() => setShowModal(false)} className="p-2.5 bg-white/5 rounded-full text-slate-400 hover:text-white transition-all">
                       <X size={20} />
                    </button>
-                   <h3 className="text-2xl font-black text-white font-outfit">
+                   <h3 className="text-2xl font-black text-black font-outfit">
                       {editingCode ? 'تعديل كود العطل' : 'إضافة كود جديد'}
                    </h3>
                 </div>
@@ -194,47 +194,47 @@ const ErrorCodes = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                    <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-2 text-right">
-                         <label className="text-slate-400 font-bold text-[10px] uppercase tracking-widest block pr-2">كود العطل (مثال: E1)</label>
+                         <label className="text-black font-bold text-[10px] uppercase tracking-widest block pr-2">كود العطل (مثال: E1)</label>
                          <input 
-                           required className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-right font-black uppercase focus:border-blue-500/50 focus:outline-none"
+                           required className="w-full bg-slate-900/5 border border-slate-900/10 rounded-2xl p-4 text-black text-right font-black uppercase focus:border-blue-500/50 focus:outline-none"
                            value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})}
                          />
                       </div>
                       <div className="space-y-2 text-right">
-                         <label className="text-slate-400 font-bold text-[10px] uppercase tracking-widest block pr-2">نوع الجهاز</label>
+                         <label className="text-black font-bold text-[10px] uppercase tracking-widest block pr-2">نوع الجهاز</label>
                          <select 
-                            required className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-right font-bold focus:border-blue-500/50 focus:outline-none appearance-none"
+                            required className="w-full bg-slate-900/5 border border-slate-900/10 rounded-2xl p-4 text-black text-right font-bold focus:border-blue-500/50 focus:outline-none appearance-none"
                             value={formData.deviceId} onChange={e => setFormData({...formData, deviceId: e.target.value})}
                          >
-                            <option value="" className="bg-slate-900">اختر الجهاز...</option>
-                            {appliances.map(app => <option key={app._id} value={app._id} className="bg-slate-900">{app.nameAr}</option>)}
+                            <option value="" className="bg-slate-900 text-slate-400">اختر الجهاز...</option>
+                            {appliances.map(app => <option key={app._id} value={app._id} className="bg-slate-900 text-slate-400 ">{app.nameAr}</option>)}
                          </select>
                       </div>
                    </div>
 
                    <div className="space-y-2 text-right">
-                      <label className="text-slate-400 font-bold text-[10px] uppercase tracking-widest block pr-2">الماركة (تأكد من توافق الماركة مع الجهاز)</label>
+                      <label className="text-black font-bold text-[10px] uppercase tracking-widest block pr-2">الماركة (تأكد من توافق الماركة مع الجهاز)</label>
                       <select 
-                         required className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-right font-bold focus:border-blue-500/50 focus:outline-none appearance-none"
+                         required className="w-full bg-slate-900/5 border border-slate-900/10 rounded-2xl p-4 text-black text-right font-bold focus:border-blue-500/50 focus:outline-none appearance-none"
                          value={formData.brandId} onChange={e => setFormData({...formData, brandId: e.target.value})}
                       >
-                         <option value="" className="bg-slate-900">اختر الماركة...</option>
-                         {brands.map(brand => <option key={brand._id} value={brand._id} className="bg-slate-900">{brand.nameAr}</option>)}
+                         <option value="" className="bg-slate-900 text-slate-400">اختر الماركة...</option>
+                         {brands.map(brand => <option key={brand._id} value={brand._id} className="bg-slate-900 text-slate-400 ">{brand.nameAr}</option>)}
                       </select>
                    </div>
 
                    <div className="space-y-2 text-right">
-                      <label className="text-slate-400 font-bold text-[10px] uppercase tracking-widest block pr-2">وصف العطل بالتفصيل</label>
+                      <label className="text-black  font-bold text-[10px] uppercase tracking-widest block pr-2">وصف العطل بالتفصيل</label>
                       <textarea 
-                        required className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-right font-bold focus:border-blue-500/50 focus:outline-none min-h-[100px]"
+                        required className="w-full bg-slate-900/5 border border-black rounded-2xl p-4 text-black text-right font-bold focus:border-blue-500/50 focus:outline-none min-h-[100px]"
                         value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
                       />
                    </div>
 
                    <div className="space-y-2 text-right">
-                      <label className="text-slate-400 font-bold text-[10px] uppercase tracking-widest block pr-2">نصيحة أولية للمستخدم (Action Step)</label>
+                      <label className="text-black  font-bold text-[10px] uppercase tracking-widest block pr-2">نصيحة أولية للمستخدم (Action Step)</label>
                       <textarea 
-                        required className="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 text-emerald-400 text-right font-bold focus:border-emerald-500/50 focus:outline-none min-h-[80px]"
+                        required className="w-full bg-slate-900/5 border border-black rounded-2xl p-4 text-black text-right font-bold focus:border-emerald-500/50 focus:outline-none min-h-[80px] text-slate-400"
                         placeholder="مثال: يرجى فصل الغسالة لمدة 10 دقائق وإعادة التشغيل..."
                         value={formData.actionStep} onChange={e => setFormData({...formData, actionStep: e.target.value})}
                       />
