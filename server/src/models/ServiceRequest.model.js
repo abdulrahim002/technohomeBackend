@@ -51,8 +51,10 @@ const ServiceRequestSchema = new mongoose.Schema({
     default: Date.now // التاريخ الفعلي لإنشاء الطلب
   },
   scheduledDate: {
-    type: Date
-    // اختياري: يُحدد عند حجز فني
+    type: String, // YYYY-MM-DD لمنع مشاكل فروق التوقيت
+  },
+  timeSlot: {
+    type: String // مثال: '10:00-12:00'
   },
 
   // Assigned Technician (اختياري: قد يكتفي العميل بالتشخيص دون حجز فني)
@@ -76,13 +78,25 @@ const ServiceRequestSchema = new mongoose.Schema({
     required: true,
     enum: [
       'diagnosed_only',
-      'pending', // بانتظار قبول الفني
-      'accepted', // تم القبول (وخصم العمولة)
-      'arrived', // الفني وصل للموقع
-      'completed', // تمت الصيانة (بإدخال الـ OTP)
-      'cancelled'
+      'pending',
+      'accepted',
+      'on_the_way',
+      'arrived',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'rejected', // مرفوض (مثلاً بسبب تضارب المواعيد)
+      'expired'   // منتهي الصلاحية (لم يرد الفني في الوقت المحدد)
     ],
     default: 'pending'
+  },
+  cancelReason: {
+    type: String,
+    enum: ['no_response_from_technician', 'rejected_by_technician', 'customer_cancelled', 'other']
+  },
+  hiddenByCustomer: {
+    type: Boolean,
+    default: false
   },
 
   // Location

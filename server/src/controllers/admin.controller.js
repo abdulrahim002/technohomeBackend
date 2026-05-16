@@ -4,8 +4,11 @@ const ServiceRequest = require('../models/ServiceRequest.model');
 const ApplianceType = require('../models/ApplianceType.model');
 const Brand = require('../models/Brand.model');
 const City = require('../models/core/City.model');
+const Area = require('../models/core/Area.model');
+const locationSyncService = require('../services/locationSyncService');
 const transactionService = require('../services/transactionService');
 const reportExportService = require('../services/reportExportService');
+const notificationService = require('../services/notificationService');
 
 // ==========================================
 // 1. إدارة المستخدمين والفنيين
@@ -36,7 +39,11 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getPendingTechnicians = async (req, res, next) => {
   try {
     const technicians = await TechnicianProfile.find({ isVerified: false })
-      .populate('user', 'firstName lastName phone city profileImage')
+      .populate({
+        path: 'user',
+        select: 'firstName lastName phone city profileImage',
+        populate: { path: 'city', select: 'nameAr' }
+      })
       .populate('specialties', 'nameAr')
       .populate('brands', 'nameAr');
 
@@ -50,7 +57,11 @@ exports.getPendingTechnicians = async (req, res, next) => {
 exports.getVerifiedTechnicians = async (req, res, next) => {
   try {
     const technicians = await TechnicianProfile.find({ isVerified: true })
-      .populate('user', 'firstName lastName phone city profileImage walletBalance')
+      .populate({
+        path: 'user',
+        select: 'firstName lastName phone city profileImage walletBalance',
+        populate: { path: 'city', select: 'nameAr' }
+      })
       .populate('specialties', 'nameAr')
       .populate('brands', 'nameAr')
       .sort({ createdAt: -1 });
@@ -69,6 +80,17 @@ exports.verifyTechnician = async (req, res, next) => {
 
     techProfile.isVerified = true;
     await techProfile.save();
+
+    // تحديث حالة المستخدم أيضاً لضمان إمكانية الدخول أو التوثيق الكامل
+    await User.findByIdAndUpdate(techProfile.user, { isVerified: true });
+
+    // إرسال إشعار للفني بالتوثيق
+    await notificationService.createNotification({
+      recipientId: techProfile.user,
+      title: 'تهانينا! تم توثيق حسابك 🎉',
+      message: 'لقد تمت مراجعة بياناتك وتوثيق حسابك رسمياً. يمكنك الآن استقبال طلبات الصيانة وزيادة دخلك.',
+      type: 'system'
+    });
 
     res.status(200).json({ status: 'success', message: 'تم توثيق الفني بنجاح' });
   } catch (error) { next(error); }
@@ -93,6 +115,15 @@ exports.chargeTechnicianWallet = async (req, res, next) => {
   try {
     const { techId, amount } = req.body;
     const transaction = await transactionService.chargeWallet(req.userId, techId, amount);
+
+    // إشعار الفني بشحن الرصيد
+    await notificationService.createNotification({
+      recipientId: techId,
+      title: 'تم شحن محفظتك 💰',
+      message: `تم إضافة ${amount} دينار إلى رصيدك. رصيدك الحالي هو ${transaction.newBalance} دينار.`,
+      type: 'system'
+    });
+
     res.status(200).json({ status: 'success', message: 'تم شحن المحفظة بنجاح', data: { transaction } });
   } catch (error) { next(error); }
 };
@@ -221,6 +252,66 @@ exports.getStatistics = async (req, res, next) => {
         }
       } 
     });
+  } catch (error) { next(error); }
+};
+
+// ==========================================
+// 5. إدارة المدن (Cities)
+// ==========================================
+
+exports.createCity = async (req, res, next) => {
+  try {
+    const { name, nameAr, nameEn, latitude, longitude } = req.body;
+    
+    // التحقق من عدم التكرار
+    const existing = await City.findOne({ $or: [{ name }, { nameAr }, { nameEn }] });
+    if (existing) {
+      return res.status(400).json({ status: 'fail', message: 'هذه المدينة مسجلة مسبقاً' });
+    }
+
+    const city = await City.create({ name, nameAr, nameEn, latitude, longitude });
+    res.status(201).json({ status: 'success', data: { city } });
+  } catch (error) { next(error); }
+};
+
+exports.getAllCities = async (req, res, next) => {
+  try {
+    // جلب المدن مع تضمين المناطق التابعة لها تلقائياً
+    const cities = await City.find().sort({ nameAr: 1 }).lean();
+    
+    // جلب المناطق ودمجها برمجياً أو عبر populate إذا كان هناك علاقة (يفضل برمجياً هنا للسرعة)
+    const areas = await Area.find({ isActive: true }).lean();
+    
+    const citiesWithAreas = cities.map(city => ({
+      ...city,
+      areas: areas.filter(area => area.cityId.toString() === city._id.toString())
+    }));
+
+    res.status(200).json({ status: 'success', data: { cities: citiesWithAreas } });
+  } catch (error) { next(error); }
+};
+
+/**
+ * تنفيذ عملية المزامنة مع ملف الـ JSON
+ */
+exports.syncLocations = async (req, res, next) => {
+  try {
+    await locationSyncService.syncAll();
+    res.status(200).json({ status: 'success', message: 'تمت المزامنة بنجاح مع قاعدة البيانات' });
+  } catch (error) { next(error); }
+};
+
+exports.updateCity = async (req, res, next) => {
+  try {
+    const city = await City.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    res.status(200).json({ status: 'success', data: { city } });
+  } catch (error) { next(error); }
+};
+
+exports.deleteCity = async (req, res, next) => {
+  try {
+    await City.findByIdAndDelete(req.params.id);
+    res.status(200).json({ status: 'success', message: 'تم حذف المدينة بنجاح' });
   } catch (error) { next(error); }
 };
 

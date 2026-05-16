@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Wrench, MapPin, Calendar } from 'lucide-react-native';   
+import { Wrench, MapPin, Calendar, Clock } from 'lucide-react-native';   
+import { TIME_SLOTS } from '../../config/constants';
 
 /** 
  * بطاقة الطلب للفني (TechnicianJobCard)
@@ -8,7 +9,7 @@ import { Wrench, MapPin, Calendar } from 'lucide-react-native';
  * هذه البطاقة تعرض تفاصيل الطلب مثل نوع الجهاز، العلامة التجارية، التاريخ، والحالة.
  *  
  */
-const TechnicianJobCard = ({ item, onPress }) => {
+const TechnicianJobCard = ({ item, onPress, hasConflict }) => {
   const getStatusStyle = (status) => {
     switch (status) {
       case 'waiting_for_confirmation': return { color: '#EF4444', bg: '#FEF2F2', label: 'طلب جديد' };
@@ -21,18 +22,28 @@ const TechnicianJobCard = ({ item, onPress }) => {
   };
 
   const status = getStatusStyle(item.status);
+  
+  const timeSlotObj = TIME_SLOTS.find(s => s.id === item.timeSlot);
+  const timeSlotLabel = timeSlotObj ? timeSlotObj.label : item.timeSlot;
 
   return (
     <TouchableOpacity 
       activeOpacity={0.9}
       onPress={onPress}
-      style={styles.card}
+      style={[styles.card, hasConflict && styles.cardConflict]}
     >
       <View style={styles.cardHeader}>
          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>● {status.label}</Text>
          </View>
-         <Text style={styles.requestId}>#{item._id.slice(-6).toUpperCase()}</Text>
+         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {hasConflict && (
+              <View style={styles.conflictBadge}>
+                <Text style={styles.conflictText}>⚠️ تضارب وقت</Text>
+              </View>
+            )}
+            <Text style={styles.requestId}>#{item._id.slice(-6).toUpperCase()}</Text>
+         </View>
       </View>
 
       <View style={styles.cardBody}>
@@ -51,9 +62,19 @@ const TechnicianJobCard = ({ item, onPress }) => {
             <MapPin size={14} color="#94A3B8" style={{ marginLeft: 6 }} />
          </View>
          <View style={styles.footerItem}>
-            <Text style={styles.footerText}>{new Date(item.scheduledDate || item.createdAt).toLocaleDateString('ar-LY')}</Text>
+            <Text style={styles.footerText}>
+              {item.scheduledDate 
+                ? item.scheduledDate 
+                : new Date(item.createdAt).toLocaleDateString('ar-LY')}
+            </Text>
             <Calendar size={14} color="#94A3B8" style={{ marginLeft: 6 }} />
          </View>
+         {timeSlotLabel && (
+           <View style={styles.footerItem}>
+              <Text style={[styles.footerText, { color: '#4F46E5' }]}>{timeSlotLabel}</Text>
+              <Clock size={14} color="#4F46E5" style={{ marginLeft: 6 }} />
+           </View>
+         )}
       </View>
     </TouchableOpacity>
   );
@@ -73,6 +94,9 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F8FAFC', paddingTop: 16 },
   footerItem: { flexDirection: 'row-reverse', alignItems: 'center' },
   footerText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  cardConflict: { borderColor: '#FECACA', backgroundColor: '#FEF2F2' },
+  conflictBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 8 },
+  conflictText: { fontSize: 10, fontWeight: '800', color: '#DC2626' }
 });
 
 export default memo(TechnicianJobCard);

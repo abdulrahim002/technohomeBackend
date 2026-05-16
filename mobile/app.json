@@ -32,6 +32,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7b9153e6-8791-46e2-ac60-48f55058257b"
+      }
+    },
+    "owner": "abdulrahimsh"
   }
 }

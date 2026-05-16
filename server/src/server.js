@@ -101,6 +101,11 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB successfully');
+    
+    // تشغيل الوظائف المجدولة (Cron Jobs)
+    const { startExpiredRequestsJob } = require('./services/cron/expiredRequestsJob');
+    startExpiredRequestsJob();
+
     server.listen(PORT, () => {
       console.log(`🚀 Server with Socket.io running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV}`);

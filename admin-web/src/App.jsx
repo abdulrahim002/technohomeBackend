@@ -9,6 +9,7 @@ import LiveFeed from './pages/LiveFeed';
 import Technicians from './pages/Technicians';
 import ServiceRequests from './pages/ServiceRequests';
 import ErrorCodes from './pages/ErrorCodes';
+import Cities from './pages/Cities';
 import LoginPage from './pages/LoginPage';
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
               <Route path="/brands" element={<Brands />} />
               <Route path="/technicians" element={<Technicians />} />
               <Route path="/error-codes" element={<ErrorCodes />} />
+              <Route path="/cities" element={<Cities />} />
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as loginApi } from '../api/authService';
 import api from '../api/api';
 import useAuthStore from '../store/useAuthStore';
+import { registerForPushNotificationsAsync, savePushTokenToServer } from '../services/NotificationService';
 
 const AuthContext = createContext({});
 
@@ -31,13 +32,41 @@ export const AuthProvider = ({ children }) => {
       const storedToken = await AsyncStorage.getItem('userToken');
       const userData = {
         ...result.user,
-        isVerified: result.techProfile?.isVerified || false
+        // تفضيل حالة التوثيق من بروفايل الفني إذا وجد، وإلا من المستخدم
+        isVerified: result.techProfile ? result.techProfile.isVerified : result.user.isVerified
       };
       setUser(userData);
       setAuth(storedToken, userData);
+      
+      // تسجيل الإشعارات بعد تسجيل الدخول
+      const pushToken = await registerForPushNotificationsAsync();
+      if (pushToken) await savePushTokenToServer(pushToken);
     }
     return result;
   };
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data.success) {
+        const { user: freshUser, techProfile } = response.data.data;
+        const storedToken = await AsyncStorage.getItem('userToken');
+        
+        const userData = {
+          ...freshUser,
+          isVerified: techProfile ? techProfile.isVerified : freshUser.isVerified
+        };
+
+        setUser(userData);
+        setAuth(storedToken, userData);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        return true;
+      }
+    } catch (err) {
+      console.log('Profile refresh failed:', err.message);
+    }
+    return false;
+  }, [setAuth]);
 
   // Load storage on mount
   useEffect(() => {
@@ -56,12 +85,20 @@ export const AuthProvider = ({ children }) => {
 
           // 2. Fetch fresh data from server
           try {
-            const response = await api.get('/auth/profile');
+            const response = await api.get('/auth/me');
             if (response.data.success) {
-              const freshUser = response.data.data.user;
-              setUser(freshUser);
-              setAuth(storedToken, freshUser);
-              await AsyncStorage.setItem('userData', JSON.stringify(freshUser));
+              const { user: freshUser, techProfile } = response.data.data;
+              const userData = {
+                ...freshUser,
+                isVerified: techProfile ? techProfile.isVerified : freshUser.isVerified
+              };
+              setUser(userData);
+              setAuth(storedToken, userData);
+              await AsyncStorage.setItem('userData', JSON.stringify(userData));
+
+              // مزامنة توكن الإشعارات
+              const pushToken = await registerForPushNotificationsAsync();
+              if (pushToken) await savePushTokenToServer(pushToken);
             }
           } catch (err) {
             console.log('Session validation failed:', err.message);
@@ -82,7 +119,7 @@ export const AuthProvider = ({ children }) => {
   }, [setAuth, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,6 +24,18 @@ const TechnicianProfileSchema = new mongoose.Schema({
     min: 0,
     default: 0
   },
+
+  // Certificates & Documents
+  certificates: [{
+    type: String, // URLs to uploaded images
+    default: []
+  }],
+  
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
   
   // Availability Switch
   isAvailable: {
@@ -51,6 +63,11 @@ const TechnicianProfileSchema = new mongoose.Schema({
     max: 100
   },
   reviewCount: {
+    type: Number,
+    default: 0
+  },
+  // سلسلة النجاح: عدد الطلبات المكتملة المتتالية بدون إلغاء أو انتهاء صلاحية
+  consecutiveCompletedJobs: {
     type: Number,
     default: 0
   }

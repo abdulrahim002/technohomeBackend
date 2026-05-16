@@ -33,10 +33,10 @@ export const connectSocket = (userId) => {
   socket.on('connect', () => {
     console.log('[SocketService] Connected, socketId:', socket.id);
 
-    // Emit 'join' to register this user on the server
+    // Emit 'registerUser' to register this user on the server
     if (userId) {
-      socket.emit('join', userId);
-      console.log('[SocketService] Emitted join for userId:', userId);
+      socket.emit('registerUser', userId);
+      console.log('[SocketService] Emitted registerUser for userId:', userId);
     }
   });
 

@@ -2,14 +2,16 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LayoutDashboard, Briefcase, User } from 'lucide-react-native';
+import { LayoutDashboard, Briefcase, User, History, MessageSquare } from 'lucide-react-native';
 
 import TechnicianDashboard from '../../screens/main/technician/TechnicianDashboard';
 import TechnicianJobDetails from '../../screens/main/technician/TechnicianJobDetails';
 import TechnicianActiveJobs from '../../screens/main/technician/TechnicianActiveJobs';
+import TechnicianHistoryScreen from '../../screens/main/technician/TechnicianHistoryScreen';
 import WalletHistoryScreen from '../../screens/main/technician/WalletHistoryScreen';
 import ChatScreen from '../../screens/main/ChatScreen';
 import ProfileScreen from '../../screens/main/profile/ProfileScreen';
+import ConversationsScreen from '../../screens/main/ConversationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -60,6 +62,22 @@ const TabNavigator = () => (
       }}
     />
     <Tab.Screen 
+      name="ChatsTab" 
+      component={ConversationsScreen} 
+      options={{
+        tabBarLabel: 'المحادثات',
+        tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} />
+      }}
+    />
+    <Tab.Screen 
+      name="HistoryTab" 
+      component={TechnicianHistoryScreen} 
+      options={{
+        tabBarLabel: 'سجلي',
+        tabBarIcon: ({ color, size }) => <History size={size} color={color} />
+      }}
+    />
+    <Tab.Screen 
       name="ProfileTab" 
       component={ProfileScreen} 
       options={{
@@ -70,11 +88,6 @@ const TabNavigator = () => (
   </Tab.Navigator>
 );
 
-/**
- * Root Technician Navigator
- * Uses a Stack to hold the Tabs + specialized screens like Job Details.
- * This resolves the 'action not handled' error when navigating from across different tabs.
- */
 export default function TechnicianTabs() {
   return (
     <Stack.Navigator screenOptions={{ headerTitleAlign: 'center' }}>
@@ -97,6 +110,11 @@ export default function TechnicianTabs() {
         name="Chat" 
         component={ChatScreen} 
         options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Conversations" 
+        component={ConversationsScreen} 
+        options={{ title: 'المحادثات' }} 
       />
     </Stack.Navigator>
   );

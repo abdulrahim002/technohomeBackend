@@ -75,6 +75,11 @@ const UserSchema = new mongoose.Schema({
     ref: 'City',
     required: [true, 'المدينة مطلوبة']
   },
+  area: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Area',
+    required: [true, 'المنطقة مطلوبة']
+  },
   address: {
     street: String,
     building: String,
@@ -87,6 +92,11 @@ const UserSchema = new mongoose.Schema({
     default: ''
   },
   fcmToken: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  expoPushToken: {
     type: String,
     trim: true,
     default: null

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
+import { connectSocket, disconnectSocket } from '../services/SocketService';
 
 // Import New Tab Navigators
 import AuthStack from './AuthStack';
@@ -15,6 +16,16 @@ import PendingApprovalScreen from '../screens/auth/PendingApprovalScreen';
  */
 export default function AppNavigator() {
   const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (user && user._id) {
+      connectSocket(user._id);
+    }
+    
+    return () => {
+      disconnectSocket();
+    };
+  }, [user]);
 
   if (isLoading) {
     return (

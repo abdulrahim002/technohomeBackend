@@ -1,4 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+// دالة موثوقة للحصول على الوقت بتوقيت ليبيا (متناسقة مع كل مكان في التطبيق)
+const getLibyaDateTime = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Tripoli',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  const get = (type) => parts.find(p => p.type === type)?.value || '0';
+  const todayStr = `${get('year')}-${get('month')}-${get('day')}`;
+  const currentDecimalHour = parseInt(get('hour'), 10) + parseInt(get('minute'), 10) / 60;
+  return { todayStr, currentDecimalHour };
+};
 import { 
   View, 
   Text, 
@@ -10,7 +25,8 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Dimensions
+  Dimensions,
+  Alert
 } from 'react-native';
 import { 
   ChevronRight, 
@@ -26,14 +42,20 @@ import {
 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useJobDetails } from '../../../hooks/useJobDetails';
+import { 
+  ServiceInfoCard 
+} from '../../../components/main/ServiceInfoCard';
+
 import JobStepper from '../../../components/main/JobStepper';
 import CompleteJobModal from '../../../components/main/CompleteJobModal';
 import { UPLOADS_URL } from '../../../config/constants';
+import { onSocketEvent, offSocketEvent } from '../../../services/SocketService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
  * TechnicianJobDetails - Refactored for Clean Architecture.
+ * يستخدم المكونات الموحدة والهوك المشترك لتقليل التكرار.
  */
 const TechnicianJobDetails = () => {
   const navigation = useNavigation();
@@ -42,6 +64,7 @@ const TechnicianJobDetails = () => {
 
   // Local State for Image Viewer
   const [selectedImage, setSelectedImage] = useState(null);
+  const [confirmTripVisible, setConfirmTripVisible] = useState(false);
 
   const {
     request,
@@ -53,18 +76,69 @@ const TechnicianJobDetails = () => {
     setFinalPrice,
     notes,
     setNotes,
+    otp,
+    setOtp,
     handleAction,
-    callCustomer,
+    handleReject,
+    callPerson,
     openInMaps
   } = useJobDetails(requestId);
+
+  useEffect(() => {
+    const handleOtpReceived = (data) => {
+      if (String(data.requestId) === String(requestId)) {
+        setOtp(data.otp);
+        Alert.alert('تم استلام الرمز ✅', 'قام العميل بإرسال رمز التأكيد رقمياً، تم تعبئته تلقائياً.');
+      }
+    };
+
+    onSocketEvent('otpReceived', handleOtpReceived);
+    return () => offSocketEvent('otpReceived', handleOtpReceived);
+  }, [requestId, setOtp]);
+
+  // فحص إذا كان مسموحاً للفني ببدء التحرك (هامش ساعتين قبل الفترة - بتوقيت ليبيا UTC+2)
+  const canStartTrip = useCallback(() => {
+    if (!request) return false;
+    const { scheduledDate, timeSlot } = request;
+    const { todayStr, currentDecimalHour } = getLibyaDateTime();
+
+    if (scheduledDate && todayStr !== scheduledDate) return false;
+
+    if (timeSlot) {
+      const slotStartHour = parseInt(timeSlot.split('-')[0].split(':')[0], 10);
+      if (currentDecimalHour < slotStartHour - 2) return false;
+    }
+
+    return true;
+  }, [request]);
+
+  const getTripHintText = useCallback(() => {
+    if (!request) return '';
+    const { scheduledDate, timeSlot } = request;
+    const { todayStr } = getLibyaDateTime();
+
+    if (scheduledDate && todayStr < scheduledDate) {
+      return `يمكنك التحرك يوم ${scheduledDate}`;
+    }
+
+    if (timeSlot) {
+      const slotStartHour = parseInt(timeSlot.split('-')[0].split(':')[0], 10);
+      const earliestHour = slotStartHour - 2;
+      return `يمكنك التحرك بعد الساعة ${String(earliestHour).padStart(2, '0')}:00`;
+    }
+
+    return '';
+  }, [request]);
 
   const getActionButton = () => {
     if (!request) return null;
     switch(request.status) {
-      case 'waiting_for_confirmation':
+      case 'pending':
         return { label: 'قبول المهمة', color: '#4F46E5', status: 'accepted', icon: <CheckCircle2 size={20} color="white" /> };
-      case 'accepted':
-        return { label: 'بدأ التحرك للموقع', color: '#0EA5E9', status: 'on_the_way', icon: <NavigationIcon size={20} color="white" /> };
+      case 'accepted': {
+        const allowed = canStartTrip();
+        return { label: 'بدأ التحرك للموقع', color: allowed ? '#0EA5E9' : '#CBD5E1', status: 'on_the_way', disabled: !allowed, icon: <NavigationIcon size={20} color="white" /> };
+      }
       case 'on_the_way':
         return { label: 'لقد وصلت للموقع', color: '#10B981', status: 'arrived', icon: <MapPin size={20} color="white" /> };
       case 'arrived':
@@ -104,7 +178,7 @@ const TechnicianJobDetails = () => {
            >
               <MessageSquare size={20} color="#4F46E5" />
            </TouchableOpacity>
-           <TouchableOpacity style={styles.backBtn} onPress={callCustomer}>
+           <TouchableOpacity style={styles.backBtn} onPress={() => callPerson(request.customer?.phone)}>
               <Phone size={20} color="#4F46E5" />
            </TouchableOpacity>
         </View>
@@ -114,40 +188,41 @@ const TechnicianJobDetails = () => {
         
         <JobStepper status={request.status} />
 
-        {/* AI Report Card */}
-        <View style={styles.reportCard}>
-           <View style={styles.reportHeader}>
-              <View style={styles.reportBadge}>
-                 <Target size={14} color="#FFF" style={{ marginLeft: 6 }} />
-                 <Text style={styles.reportBadgeText}>تشخيص الذكاء الاصطناعي</Text>
-              </View>
-              <AlertTriangle size={20} color="#4F46E5" />
-           </View>
-           
-           <Text style={styles.reportMainText}>{request.aiDiagnosis?.diagnosis || 'لم يتم التشخيص آلياً'}</Text>
-           <Text style={styles.reportSubText}>{request.problemDescription}</Text>
-           
-           {request.images && request.images.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-                 {request.images.map((img, index) => {
-                    const fullUri = img.startsWith('http') ? img : `${UPLOADS_URL}${img.replace(/^\/+/, '')}`;
-                    return (
-                      <TouchableOpacity 
-                        key={index} 
-                        style={styles.imageWrapper}
-                        onPress={() => setSelectedImage(fullUri)}
-                      >
-                        <Image 
-                          source={{ uri: fullUri }} 
-                          style={styles.evidenceImage} 
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                    );
-                 })}
-              </ScrollView>
-           )}
-        </View>
+        {['rejected', 'expired'].includes(request.status) && (
+          <View style={styles.errorBanner}>
+             <AlertTriangle size={20} color="#EF4444" />
+             <Text style={styles.errorBannerText}>
+               {request.status === 'rejected' ? 'هذا الطلب تم رفضه مسبقاً' : 'انتهت صلاحية هذا الطلب (Timeout)'}
+             </Text>
+          </View>
+        )}
+
+
+
+        {/* Evidence Images */}
+        {request.images && request.images.length > 0 && (
+          <View style={styles.imageSection}>
+             <Text style={styles.sectionTitle}>صور المعاينة</Text>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+                {request.images.map((img, index) => {
+                   const fullUri = img.startsWith('http') ? img : `${UPLOADS_URL}${img.replace(/^\/+/, '')}`;
+                   return (
+                     <TouchableOpacity 
+                       key={index} 
+                       style={styles.imageWrapper}
+                       onPress={() => setSelectedImage(fullUri)}
+                     >
+                       <Image 
+                         source={{ uri: fullUri }} 
+                         style={styles.evidenceImage} 
+                         resizeMode="cover"
+                       />
+                     </TouchableOpacity>
+                   );
+                })}
+             </ScrollView>
+          </View>
+        )}
 
         {/* Client & Location Card */}
         <Text style={styles.sectionTitle}>بيانات العميل والموقع</Text>
@@ -171,47 +246,127 @@ const TechnicianJobDetails = () => {
            </TouchableOpacity>
         </View>
 
-        {/* Service Details */}
-        <Text style={styles.sectionTitle}>تفاصيل الجهاز</Text>
-        <View style={styles.deviceCard}>
-           <View style={styles.deviceIcon}>
-              <Wrench size={24} color="#4F46E5" />
-           </View>
-           <View style={styles.deviceInfo}>
-              <Text style={styles.deviceName}>{request.applianceType?.nameAr}</Text>
-              <Text style={styles.deviceBrand}>{request.brand}</Text>
-           </View>
-        </View>
+        {/* Device & Problem Info (Shared Card) */}
+        <Text style={styles.sectionTitle}>تفاصيل الطلب</Text>
+        <ServiceInfoCard 
+          applianceType={request.applianceType}
+          brand={request.brand}
+          problemDescription={request.problemDescription}
+        />
 
       </ScrollView>
 
       {/* Action Footer */}
       {action && (
         <View style={styles.footer}>
-           <TouchableOpacity 
-             disabled={actionLoading}
-             onPress={() => action.status === 'completed' ? setPriceModalVisible(true) : handleAction(action.status)}
-             style={[styles.actionBtn, { backgroundColor: action.color }]}
-           >
-             {actionLoading ? <ActivityIndicator color="white" /> : (
-               <>
-                 <Text style={styles.actionBtnText}>{action.label}</Text>
-                 {action.icon}
-               </>
-             )}
-           </TouchableOpacity>
+           {request.status === 'pending' ? (
+             <View style={styles.buttonGroup}>
+                <TouchableOpacity 
+                  disabled={actionLoading}
+                  onPress={handleReject}
+                  style={[styles.actionBtn, styles.rejectBtn]}
+                >
+                  {actionLoading ? <ActivityIndicator color="#EF4444" /> : (
+                    <>
+                      <Text style={[styles.actionBtnText, {color: '#EF4444'}]}>رفض</Text>
+                      <X size={20} color="#EF4444" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  disabled={actionLoading}
+                  onPress={() => handleAction('accepted')}
+                  style={[styles.actionBtn, { backgroundColor: '#4F46E5', flex: 2 }]}
+                >
+                  {actionLoading ? <ActivityIndicator color="white" /> : (
+                    <>
+                      <Text style={styles.actionBtnText}>قبول</Text>
+                      <CheckCircle2 size={20} color="white" />
+                    </>
+                  )}
+                </TouchableOpacity>
+             </View>
+           ) : action.status === 'on_the_way' ? (
+             // زر بدء التحرك: يحتاج منطق خاص (تعطيل + modal تأكيد)
+             <View>
+               <TouchableOpacity
+                 disabled={actionLoading || action.disabled}
+                 onPress={() => setConfirmTripVisible(true)}
+                 style={[styles.actionBtn, { backgroundColor: action.color, opacity: action.disabled ? 0.7 : 1 }]}
+               >
+                 {actionLoading ? <ActivityIndicator color="white" /> : (
+                   <>
+                     <Text style={styles.actionBtnText}>{action.label}</Text>
+                     {action.icon}
+                   </>
+                 )}
+               </TouchableOpacity>
+               {action.disabled && (
+                 <Text style={styles.hintText}>
+                   ⏰ {getTripHintText()}
+                 </Text>
+               )}
+             </View>
+           ) : (
+             <TouchableOpacity
+               disabled={actionLoading}
+               onPress={() => action.status === 'completed' ? setPriceModalVisible(true) : handleAction(action.status)}
+               style={[styles.actionBtn, { backgroundColor: action.color }]}
+             >
+               {actionLoading ? <ActivityIndicator color="white" /> : (
+                 <>
+                   <Text style={styles.actionBtnText}>{action.label}</Text>
+                   {action.icon}
+                 </>
+               )}
+             </TouchableOpacity>
+           )}
         </View>
       )}
+
+      {/* Confirm Trip Modal */}
+      <Modal visible={confirmTripVisible} transparent animationType="slide">
+        <View style={styles.confirmModalBg}>
+          <View style={styles.confirmModalContent}>
+            <View style={styles.confirmModalIcon}>
+              <NavigationIcon size={28} color="#0EA5E9" />
+            </View>
+            <Text style={styles.confirmModalTitle}>تأكيد بدء التحرك</Text>
+            <Text style={styles.confirmModalBody}>
+              هل أنت متأكد من بدء التحرك نحو موقع العميل الآن؟
+            </Text>
+            <Text style={styles.confirmModalSub}>سيتم إخبار العميل فوراً.</Text>
+            <View style={styles.confirmModalActions}>
+              <TouchableOpacity
+                style={styles.confirmModalCancel}
+                onPress={() => setConfirmTripVisible(false)}
+              >
+                <Text style={styles.confirmModalCancelText}>إلغاء</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmModalConfirm}
+                onPress={() => {
+                  setConfirmTripVisible(false);
+                  handleAction('on_the_way');
+                }}
+              >
+                <Text style={styles.confirmModalConfirmText}>نعم، تحرك الآن 🚗</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Pricing Modal */}
       <CompleteJobModal 
         visible={priceModalVisible}
         onClose={() => setPriceModalVisible(false)}
         onConfirm={() => handleAction('completed')}
-        price={finalPrice}
-        setPrice={setFinalPrice}
         notes={notes}
         setNotes={setNotes}
+        otp={otp}
+        setOtp={setOtp}
       />
 
       {/* IMAGE VIEWER MODAL */}
@@ -248,6 +403,18 @@ const styles = StyleSheet.create({
   reportBadgeText: { fontSize: 10, fontWeight: '900', color: '#FFF' },
   reportMainText: { fontSize: 18, fontWeight: '900', color: '#1E293B', textAlign: 'right', marginBottom: 8, lineHeight: 26 },
   reportSubText: { fontSize: 13, fontWeight: '600', color: '#4F46E5', textAlign: 'right', opacity: 0.8, lineHeight: 20 },
+  hintText: { textAlign: 'center', color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 8 },
+  confirmModalBg: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'flex-end' },
+  confirmModalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40, alignItems: 'center' },
+  confirmModalIcon: { width: 64, height: 64, borderRadius: 22, backgroundColor: '#F0F9FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  confirmModalTitle: { fontSize: 20, fontWeight: '900', color: '#1E293B', marginBottom: 8 },
+  confirmModalBody: { fontSize: 15, fontWeight: '700', color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 6 },
+  confirmModalSub: { fontSize: 12, fontWeight: '600', color: '#94A3B8', marginBottom: 24 },
+  confirmModalActions: { flexDirection: 'row-reverse', gap: 12, width: '100%' },
+  confirmModalCancel: { flex: 1, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  confirmModalCancelText: { fontSize: 15, fontWeight: '800', color: '#64748B' },
+  confirmModalConfirm: { flex: 2, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0EA5E9' },
+  confirmModalConfirmText: { fontSize: 15, fontWeight: '900', color: '#FFF' },
   imageScroll: { marginTop: 20 },
   imageWrapper: { width: 120, height: 80, borderRadius: 16, marginLeft: 12, backgroundColor: '#f1f5f9', overflow: 'hidden' },
   evidenceImage: { width: '100%', height: '100%' },
@@ -263,8 +430,12 @@ const styles = StyleSheet.create({
   deviceInfo: { flex: 1, alignItems: 'flex-end' },
   deviceName: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
   deviceBrand: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  errorBanner: { backgroundColor: '#FEF2F2', padding: 15, borderRadius: 16, flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#FEE2E2' },
+  errorBannerText: { color: '#EF4444', fontSize: 13, fontWeight: '800', marginRight: 10 },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F8FAFC' },
-  actionBtn: { height: 60, borderRadius: 20, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { height: 4 } },
+  buttonGroup: { flexDirection: 'row-reverse', gap: 12 },
+  actionBtn: { height: 60, borderRadius: 20, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { height: 4 }, flex: 1 },
+  rejectBtn: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FEE2E2', elevation: 0 },
   actionBtnText: { color: '#FFF', fontSize: 18, fontWeight: '900', marginLeft: 12 },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   closeModal: { position: 'absolute', top: 50, right: 20, zIndex: 10 },

@@ -11,12 +11,31 @@ export const useTechnician = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
 
+  const [activeCount, setActiveCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     const result = await technicianService.getTechnicianProfile();
     if (result.success) {
       setProfile(result.data);
       setIsOnline(result.data.isAvailable);
+    }
+    // جلب عدد المهام النشطة والمكتملة
+    const activeResult = await technicianService.getActiveJobs();
+    if (activeResult.success) {
+      // التأكد من جلب الرقم الصحيح: إما من حقل count أو من طول المصفوفة مباشرة
+      const count = activeResult.data.count !== undefined 
+        ? activeResult.data.count 
+        : (activeResult.data.requests?.length || 0);
+      
+      console.log(`[DEBUG] Active Jobs Count: ${count}`);
+      setActiveCount(count);
+    }
+    const historyResult = await technicianService.getJobHistory();
+    if (historyResult.success) {
+      const completed = (historyResult.data.requests || []).filter(r => r.status === 'completed');
+      setCompletedCount(completed.length);
     }
     setLoading(false);
   }, []);
@@ -34,12 +53,10 @@ export const useTechnician = () => {
 
   const toggleOnline = useCallback(async () => {
     const nextStatus = !isOnline;
-    // تحديث متفائل (Optimistic UI)
     setIsOnline(nextStatus);
     
     const result = await technicianService.toggleAvailability(nextStatus);
     if (!result.success) {
-      // إرجاع الحالة إذا فشل الطلب
       setIsOnline(!nextStatus);
       alert(result.message);
     }
@@ -50,8 +67,10 @@ export const useTechnician = () => {
     reliabilityScore: profile?.reliabilityScore || 0,
     overallRating: profile?.rating || 0,
     reviewCount: profile?.reviewCount || 0,
-    isVerified: profile?.isVerified || false
-  }), [profile]);
+    isVerified: profile?.isVerified || false,
+    activeJobsCount: activeCount,
+    completedJobs: completedCount
+  }), [profile, activeCount, completedCount]);
 
   return {
     user,

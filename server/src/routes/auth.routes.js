@@ -9,7 +9,11 @@ const { verifyToken, isAuthenticated } = require('../middlewares/auth.middleware
  */
 
 // Register with optional profile image
-router.post('/register', upload.single('profileImage'), authController.register);
+// Register with profile image and certificates (for techs)
+router.post('/register', upload.fields([
+  { name: 'profileImage', maxCount: 1 },
+  { name: 'certificates', maxCount: 5 }
+]), authController.register);
 
 // Login user
 router.post('/login', authController.login);

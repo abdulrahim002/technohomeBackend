@@ -1,233 +1,382 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
 import { 
-  ClipboardList, 
-  Settings, 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Dimensions
+} from 'react-native';
+import { 
+  ChevronRight, 
   MapPin, 
-  User, 
-  CheckCircle, 
-  Calendar, 
-  Clock, 
+  Phone, 
+  Navigation as NavigationIcon, 
+  MessageSquare,
   Zap,
-  ChevronLeft
+  X,
+  Trash2,
+  Calendar,
+  User as UserIcon,
+  ShieldCheck,
+  Star,
+  CheckCircle
 } from 'lucide-react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useJobDetails } from '../../hooks/useJobDetails';
+import { ServiceInfoCard } from '../../components/main/ServiceInfoCard';
+import { DiagnosisCard } from '../../components/main/DiagnosisCard';
+import JobStepper from '../../components/main/JobStepper';
+import RatingModal from '../../components/main/RatingModal';
+import { UPLOADS_URL } from '../../config/constants';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
- * BookingDetailsScreen - شاشة عرض تفاصيل الطلب (للقراءة فقط)
- * الدور: عرض بيانات الطلب المخزن مسبقاً من سجل الطلبات.
- * 
- * استقبال البيانات: يتم استقبال كائن الطلب (order) عبر route.params.order
+ * BookingDetailsScreen - Professional Customer View.
+ * يعرض تفاصيل الطلب للعميل مع إمكانية تتبع الحالة الحية والاتصال بالفني.
  */
-export default function BookingDetailsScreen({ route, navigation }) {
-  // استقبال الطلب من الـ Navigation
+export default function BookingDetailsScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
   const { order } = route.params || {};
+  const requestId = order?._id;
 
-  if (!order) {
-    return (
-      <View style={styles.center}>
-        <Text>عذراً، لم يتم العثور على بيانات الطلب.</Text>
-      </View>
-    );
-  }
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
 
-  // دالة لجلب تسمية الحالة بلون مناسب
-  const getStatusInfo = (status) => {
-    const metas = {
-      pending: { label: 'بانتظار المراجعة', color: '#F59E0B' },
-      accepted: { label: 'تم القبول', color: '#3B82F6' },
-      completed: { label: 'مكتمل ✅', color: '#10B981' },
-      cancelled: { label: 'ملغي', color: '#EF4444' },
-      diagnosed_only: { label: 'تشخيص فقط', color: '#8B5CF6' }
-    };
-    return metas[status] || { label: status, color: '#64748B' };
+  const {
+    request,
+    loading,
+    actionLoading,
+    cancelBooking,
+    deleteRequest,
+    callPerson,
+    openInMaps,
+    sendOtpToTechnician,
+    submitTechnicianReview
+  } = useJobDetails(requestId);
+
+  const handleSubmitReview = async (rating, comment) => {
+    const result = await submitTechnicianReview(rating, comment);
+    if (result?.success) {
+      setRatingModalVisible(false);
+    }
   };
 
-  const statusMeta = getStatusInfo(order.status);
+  if (loading || !request) return (
+    <View style={styles.center}>
+      <ActivityIndicator size="large" color="#4F46E5" />
+    </View>
+  );
 
-  const handleBookNow = () => {
-    navigation.navigate('TechnicianList', {
-      requestId: order._id,
-      diagnosisData: { aiDiagnosis: order.aiDiagnosis },
-      bookingData: {
-        ...order,
-        applianceType: order.applianceType?._id || order.applianceType,
-        imagesUris: order.images || []
-      }
-    });
-  };
+  const isDiagnosedOnly = request.status === 'diagnosed_only';
+  const canCancel = request.status === 'pending';
+  const isCompleted = request.status === 'completed';
+  const hasReview = !!request.review;
 
   return (
-    <View style={styles.main}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ChevronLeft size={24} color="#1E293B" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+           <ChevronRight size={24} color="#1E293B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>تفاصيل الطلب</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>تفاصيل طلبي</Text>
+        <View style={styles.headerActions}>
+           {request.status !== 'completed' && !isDiagnosedOnly && (
+             <TouchableOpacity 
+               style={[styles.backBtn, { marginRight: 10 }]} 
+               onPress={() => navigation.navigate('Chat', { 
+                 requestId: request._id, 
+                 recipientId: request.technician?._id, 
+                 recipientName: `${request.technician?.firstName || 'فني'} ${request.technician?.lastName || ''}` 
+               })}
+             >
+                <MessageSquare size={20} color="#4F46E5" />
+             </TouchableOpacity>
+           )}
+           <TouchableOpacity 
+             style={styles.backBtn} 
+             onPress={deleteRequest}
+             disabled={actionLoading}
+           >
+              <Trash2 size={20} color="#EF4444" />
+           </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
         
-        {/* Status Card */}
-        <View style={[styles.statusCard, { borderColor: statusMeta.color }]}>
-           <Text style={styles.label}>حالة الطلب الحالية:</Text>
-           <View style={[styles.badge, { backgroundColor: statusMeta.color + '20' }]}>
-              <Text style={[styles.badgeText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-           </View>
-        </View>
+        {/* Progress Stepper (If assigned) */}
+        {!isDiagnosedOnly && <JobStepper status={request.status} />}
 
-        {/* Device Info Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Settings size={20} color="#4F46E5" />
-            <Text style={styles.sectionTitle}>بيانات الجهاز</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>نوع الجهاز:</Text>
-            <Text style={styles.infoValue}>{order.applianceType?.nameAr || 'غير محدد'}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>الماركة:</Text>
-            <Text style={styles.infoValue}>{order.brand || 'غير محدد'}</Text>
-          </View>
-        </View>
-
-        {/* Problem Description */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ClipboardList size={20} color="#4F46E5" />
-            <Text style={styles.sectionTitle}>وصف المشكلة</Text>
-          </View>
-          <Text style={styles.descriptionText}>{order.problemDescription}</Text>
-        </View>
-
-        {/* AI Diagnosis Result */}
-        {order.aiDiagnosis && (
-          <View style={[styles.section, styles.aiSection]}>
-            <View style={styles.sectionHeader}>
-              <Zap size={20} color="#8B5CF6" fill="#8B5CF6" />
-              <Text style={[styles.sectionTitle, { color: '#8B5CF6' }]}>التشخيص الذكي المحفوظ</Text>
+        {/* === COMPLETED: Rating Section === */}
+        {isCompleted && (
+          <View style={styles.completedBanner}>
+            <View style={styles.completedIconRow}>
+              <CheckCircle size={24} color="#10B981" />
+              <Text style={styles.completedTitle}>تم إتمام المهمة بنجاح ✅</Text>
             </View>
-            <Text style={styles.diagnosisText}>{order.aiDiagnosis.diagnosis}</Text>
-            
-            {order.aiDiagnosis.steps?.length > 0 && (
-               <View style={styles.stepsContainer}>
-                  {order.aiDiagnosis.steps.map((step, index) => (
-                    <View key={index} style={styles.stepItem}>
-                      <CheckCircle size={14} color="#10B981" />
-                      <Text style={styles.stepText}>{step}</Text>
-                    </View>
+
+            {hasReview ? (
+              <View style={styles.reviewDone}>
+                <View style={styles.reviewStarsRow}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star 
+                      key={s} 
+                      size={18} 
+                      color={s <= request.review.rating ? "#F59E0B" : "#CBD5E1"} 
+                      fill={s <= request.review.rating ? "#F59E0B" : "transparent"} 
+                    />
                   ))}
-               </View>
+                </View>
+                <Text style={styles.reviewDoneText}>شكراً لك! تم تقييمك بنجاح</Text>
+                {request.review.comment ? (
+                  <Text style={styles.reviewComment}>"{request.review.comment}"</Text>
+                ) : null}
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.rateBtn} 
+                onPress={() => setRatingModalVisible(true)}
+              >
+                <Star size={18} color="#FFF" fill="#FFF" />
+                <Text style={styles.rateBtnText}>قيّم الفني الآن</Text>
+              </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* Tech Info if assigned */}
-        {order.technician && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <User size={20} color="#10B981" />
-              <Text style={[styles.sectionTitle, { color: '#10B981' }]}>الفني المختص</Text>
-            </View>
-            <Text style={styles.infoValue}>{order.technician.fullName || 'جاري التعيين...'}</Text>
-            {order.scheduledDate && (
-               <View style={styles.dateInfo}>
-                  <Calendar size={14} color="#64748B" />
-                  <Text style={styles.dateText}>
-                     {new Date(order.scheduledDate).toLocaleDateString('ar-LY')}
-                  </Text>
-               </View>
-            )}
+        {/* Diagnosis Results */}
+        <DiagnosisCard 
+          diagnosis={request.aiDiagnosis?.diagnosis} 
+          steps={request.aiDiagnosis?.steps} 
+        />
+
+        {/* Technician Info (If assigned) */}
+        {request.technician && (
+          <View style={styles.techCard}>
+             <View style={styles.techHeader}>
+                <View style={styles.techInfo}>
+                   <Text style={styles.techName}>{request.technician.firstName} {request.technician.lastName}</Text>
+                   <View style={styles.verifiedRow}>
+                      <ShieldCheck size={12} color="#10B981" />
+                      <Text style={styles.verifiedText}>فني معتمد</Text>
+                   </View>
+                </View>
+                <View style={styles.techAvatar}>
+                   {request.technician.profileImage ? (
+                      <Image source={{ uri: request.technician.profileImage }} style={styles.avatarImg} />
+                   ) : (
+                      <UserIcon size={30} color="#CBD5E1" />
+                   )}
+                </View>
+             </View>
+
+             {/* OTP Display for Customer */}
+             {request.closingOTP && request.status !== 'completed' && (
+                <View style={styles.otpBox}>
+                   <Text style={styles.otpLabel}>رمز إغلاق الطلب (أعطه للفني أو أرسله رقمياً)</Text>
+                   <View style={styles.otpCodeContainer}>
+                      {request.closingOTP.split('').map((char, index) => (
+                         <View key={index} style={styles.otpDigit}>
+                            <Text style={styles.otpDigitText}>{char}</Text>
+                         </View>
+                      ))}
+                   </View>
+                   
+                   <TouchableOpacity 
+                     style={styles.sendOtpBtn} 
+                     onPress={sendOtpToTechnician}
+                     disabled={actionLoading}
+                   >
+                      <Zap size={16} color="#FFF" style={{ marginLeft: 6 }} />
+                      <Text style={styles.sendOtpBtnText}>إرسال الرمز لجهاز الفني</Text>
+                   </TouchableOpacity>
+                </View>
+             )}
+             
+             <View style={styles.techActions}>
+                {!isCompleted && (
+                  <TouchableOpacity style={styles.callBtn} onPress={() => callPerson(request.technician.phone)}>
+                     <Phone size={18} color="#FFF" style={{ marginLeft: 8 }} />
+                     <Text style={styles.callBtnText}>اتصال هاتفياً</Text>
+                  </TouchableOpacity>
+                )}
+                {canCancel && (
+                   <TouchableOpacity style={styles.cancelBtn} onPress={cancelBooking}>
+                      <Text style={styles.cancelBtnText}>إلغاء حجز الفني</Text>
+                   </TouchableOpacity>
+                )}
+             </View>
           </View>
         )}
 
-        {/* Book Now Button (Conditional) */}
-        {order.status === 'diagnosed_only' && (
-          <TouchableOpacity 
-            style={styles.bookNowBtn} 
-            onPress={handleBookNow}
-            activeOpacity={0.8}
-          >
-            <Zap size={20} color="white" />
-            <Text style={styles.bookNowText}>اطلب فني للإصلاح الآن</Text>
-          </TouchableOpacity>
+        {/* Evidence Images */}
+        {request.images && request.images.length > 0 && (
+          <View style={styles.imageSection}>
+             <Text style={styles.sectionTitle}>الصور المرفقة</Text>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+                {request.images.map((img, index) => {
+                   const fullUri = img.startsWith('http') ? img : `${UPLOADS_URL}${img.replace(/^\/+/, '')}`;
+                   return (
+                     <TouchableOpacity 
+                       key={index} 
+                       style={styles.imageWrapper}
+                       onPress={() => setSelectedImage(fullUri)}
+                     >
+                       <Image 
+                         source={{ uri: fullUri }} 
+                         style={styles.evidenceImage} 
+                         resizeMode="cover"
+                       />
+                     </TouchableOpacity>
+                   );
+                })}
+             </ScrollView>
+          </View>
+        )}
+
+        {/* Device & Problem Info (Shared Card) */}
+        <Text style={styles.sectionTitle}>تفاصيل الطلب</Text>
+        <ServiceInfoCard 
+          applianceType={request.applianceType}
+          brand={request.brand}
+          problemDescription={request.problemDescription}
+        />
+
+        {/* Location Preview */}
+        <Text style={styles.sectionTitle}>موقع تقديم الخدمة</Text>
+        <View style={styles.infoCard}>
+           <View style={styles.infoRow}>
+              <Text style={styles.infoValue}>{request.serviceAddress?.cityId?.nameAr || 'غير محدد'}</Text>
+              <Text style={styles.infoLabel}>المدينة</Text>
+           </View>
+           <View style={styles.infoRow}>
+              <Text style={styles.infoValue}>{request.serviceAddress?.street || 'العنوان غير محدد'}</Text>
+              <Text style={styles.infoLabel}>العنوان</Text>
+           </View>
+           
+           <TouchableOpacity style={styles.mapBtn} onPress={openInMaps}>
+              <NavigationIcon size={18} color="#4F46E5" style={{ marginLeft: 8 }} />
+              <Text style={styles.mapBtnText}>رؤية الموقع على الخريطة</Text>
+           </TouchableOpacity>
+        </View>
+
+        {/* Action for Diagnosed Only */}
+        {isDiagnosedOnly && (
+           <TouchableOpacity 
+             style={styles.bookNowBtn}
+             onPress={() => navigation.navigate('TechnicianList', {
+               requestId: request._id,
+               diagnosisData: { aiDiagnosis: request.aiDiagnosis },
+               bookingData: request
+             })}
+           >
+              <Zap size={20} color="#FFF" />
+              <Text style={styles.bookNowText}>اطلب فني للإصلاح الآن</Text>
+           </TouchableOpacity>
         )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </View>
+
+      {/* IMAGE VIEWER MODAL */}
+      <Modal visible={!!selectedImage} transparent animationType="fade">
+        <View style={styles.modalBg}>
+          <TouchableOpacity style={styles.closeModal} onPress={() => setSelectedImage(null)}>
+            <X size={32} color="white" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image 
+              source={{ uri: selectedImage }} 
+              style={styles.fullImage} 
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* RATING MODAL */}
+      <RatingModal 
+        visible={ratingModalVisible}
+        onClose={() => setRatingModalVisible(false)}
+        onConfirm={handleSubmitReview}
+      />
+
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: '#FAFBFD' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#FFF'
-  },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
+  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
-  scroll: { padding: 20 },
-
-  statusCard: { 
-    backgroundColor: '#FFF', 
-    padding: 20, 
-    borderRadius: 24, 
-    borderRightWidth: 6, 
-    marginBottom: 20,
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05
-  },
-  label: { fontSize: 13, fontWeight: '700', color: '#94A3B8' },
-  badge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: '900' },
-
-  section: { backgroundColor: '#FFF', padding: 20, borderRadius: 24, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05 },
-  aiSection: { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE', borderWidth: 1 },
-  sectionHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 15, gap: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
-
-  infoRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
-  infoLabel: { fontSize: 14, fontWeight: '700', color: '#64748B' },
-  infoValue: { fontSize: 14, fontWeight: '800', color: '#1E293B' },
-
-  descriptionText: { fontSize: 14, color: '#475569', textAlign: 'right', lineHeight: 22 },
-  diagnosisText: { fontSize: 15, fontWeight: '800', color: '#5B21B6', textAlign: 'right', marginBottom: 15 },
+  headerActions: { flexDirection: 'row' },
+  scrollBody: { padding: 20, paddingBottom: 40 },
   
-  stepsContainer: { gap: 10 },
-  stepItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  stepText: { fontSize: 13, color: '#6D28D9', flex: 1, textAlign: 'right' },
+  // Completed Banner
+  completedBanner: { backgroundColor: '#F0FDF4', borderRadius: 20, padding: 20, marginBottom: 25, borderWidth: 1, borderColor: '#BBF7D0' },
+  completedIconRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 15 },
+  completedTitle: { fontSize: 16, fontWeight: '900', color: '#166534' },
+  rateBtn: { backgroundColor: '#F59E0B', height: 52, borderRadius: 16, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  rateBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+  reviewDone: { alignItems: 'center', paddingTop: 5 },
+  reviewStarsRow: { flexDirection: 'row-reverse', gap: 4, marginBottom: 8 },
+  reviewDoneText: { fontSize: 13, fontWeight: '700', color: '#166534' },
+  reviewComment: { fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 6, fontStyle: 'italic', textAlign: 'center' },
 
-  dateInfo: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 10 },
-  dateText: { fontSize: 12, color: '#64748B', fontWeight: '700' },
+  imageSection: { marginBottom: 25 },
+  imageScroll: { marginTop: 10 },
+  imageWrapper: { width: 120, height: 80, borderRadius: 16, marginLeft: 12, backgroundColor: '#f1f5f9', overflow: 'hidden' },
+  evidenceImage: { width: '100%', height: '100%' },
+  
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: '#94A3B8', textAlign: 'right', marginBottom: 12, textTransform: 'uppercase' },
+  
+  techCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 25, borderWidth: 1, borderColor: '#F1F5F9', elevation: 4, shadowColor: '#4F46E5', shadowOpacity: 0.05 },
+  techHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 15 },
+  techAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImg: { width: '100%', height: '100%' },
+  techInfo: { flex: 1, marginRight: 15, alignItems: 'flex-end' },
+  techName: { fontSize: 17, fontWeight: '900', color: '#1E293B' },
+  verifiedRow: { flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4, gap: 4 },
+  verifiedText: { fontSize: 12, color: '#10B981', fontWeight: '700' },
+  
+  techActions: { flexDirection: 'row-reverse', gap: 12, marginTop: 5 },
+  callBtn: { flex: 1, backgroundColor: '#4F46E5', height: 48, borderRadius: 14, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center' },
+  callBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  cancelBtn: { paddingHorizontal: 15, height: 48, borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  cancelBtnText: { color: '#EF4444', fontSize: 13, fontWeight: '700' },
 
-  bookNowBtn: { 
-    backgroundColor: '#4F46E5', 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    paddingVertical: 20, 
-    borderRadius: 24,
-    gap: 12,
-    marginTop: 10,
-    shadowColor: '#4F46E5',
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8
-  },
-  bookNowText: { color: 'white', fontSize: 16, fontWeight: '900' }
+  infoCard: { backgroundColor: '#F8FAFC', borderRadius: 24, padding: 20, marginBottom: 25, borderWidth: 1, borderColor: '#F1F5F9' },
+  infoRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 12 },
+  infoLabel: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  infoValue: { fontSize: 14, fontWeight: '800', color: '#1E293B' },
+  mapBtn: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', paddingVertical: 12, borderRadius: 16, marginTop: 10, borderWidth: 1, borderColor: '#E2E8F0' },
+  mapBtnText: { color: '#4F46E5', fontWeight: '800', fontSize: 14 },
+  
+  otpBox: { backgroundColor: '#F5F3FF', padding: 15, borderRadius: 16, marginBottom: 15, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1.5, borderColor: '#DDD6FE' },
+  otpLabel: { fontSize: 11, fontWeight: '700', color: '#6D28D9', marginBottom: 10 },
+  otpCodeContainer: { flexDirection: 'row', gap: 10 },
+  otpDigit: { width: 40, height: 45, backgroundColor: '#FFF', borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E9D5FF', elevation: 2 },
+  otpDigitText: { fontSize: 20, fontWeight: '900', color: '#4F46E5' },
+  sendOtpBtn: { backgroundColor: '#4F46E5', flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, marginTop: 15 },
+  sendOtpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+
+  bookNowBtn: { backgroundColor: '#4F46E5', height: 64, borderRadius: 22, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 12, elevation: 8, shadowColor: '#4F46E5', shadowOpacity: 0.3 },
+  bookNowText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+  closeModal: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
+  fullImage: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.8 },
 });

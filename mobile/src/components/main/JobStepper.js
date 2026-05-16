@@ -10,7 +10,7 @@ import { CheckCircle2 } from 'lucide-react-native';
  */
 const JobStepper = ({ status }) => {
   const isFinished = (s) => ['completed'].includes(s);
-  const isStarted = (s) => !['waiting_for_confirmation'].includes(s);
+  const isStarted = (s) => ['accepted', 'on_the_way', 'arrived', 'in_progress', 'completed'].includes(s);
   const isArrived = (s) => ['arrived', 'in_progress', 'completed'].includes(s);
 
   return (

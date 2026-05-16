@@ -23,14 +23,31 @@ router.get('/lookups/appliances', async (req, res) => {
 });
 
 router.get('/lookups/cities', async (req, res) => {
-  const cities = await City.find().sort({ nameAr: 1 });
-  res.status(200).json({ status: 'success', data: { cities } });
+  try {
+    const Area = require('../models/core/Area.model');
+    const cities = await City.find().sort({ nameAr: 1 }).lean();
+    const areas = await Area.find({ isActive: true }).lean();
+    
+    const citiesWithAreas = cities.map(city => ({
+      ...city,
+      areas: areas.filter(area => area.cityId.toString() === city._id.toString())
+    }));
+
+    console.log(`📡 Sending ${citiesWithAreas.length} cities with areas populated`);
+    citiesWithAreas.forEach(c => console.log(`   - ${c.nameAr}: ${c.areas?.length || 0} areas`));
+
+    res.status(200).json({ status: 'success', data: { cities: citiesWithAreas } });
+  } catch (error) {
+    console.error('❌ Lookup Cities Error:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
 });
 
 /**
  * --- Client Protected Routes ---
  */
 router.post('/analyze', verifyToken, isAuthenticated, isClient, serviceRequestController.analyzeProblem);
+router.post('/upload-image', verifyToken, isAuthenticated, upload.single('image'), serviceRequestController.uploadImage);
 
 router.post('/', 
   verifyToken, 
@@ -42,13 +59,18 @@ router.post('/',
 
 router.get('/my-requests', verifyToken, isAuthenticated, isClient, serviceRequestController.getMyServiceRequests);
 router.get('/technicians/discover', verifyToken, isAuthenticated, isClient, serviceRequestController.discoverTechnicians);
+router.get('/technicians/:techId/profile', verifyToken, isAuthenticated, serviceRequestController.getTechnicianPublicProfile);
+router.get('/technicians/:techId/unavailable-slots', verifyToken, isAuthenticated, serviceRequestController.getUnavailableSlots);
 router.post('/:id/review', verifyToken, isAuthenticated, isClient, reviewController.submitReview);
+router.post('/:id/authorize-completion', verifyToken, isAuthenticated, isClient, serviceRequestController.authorizeCompletion);
 
 /**
  * --- Technician Protected Routes ---
  */
 router.get('/technician/active', verifyToken, isAuthenticated, isTechnician, serviceRequestController.getTechnicianActiveJobs);
+router.get('/technician/history', verifyToken, isAuthenticated, isTechnician, serviceRequestController.getTechnicianJobHistory);
 router.patch('/:id/accept', verifyToken, isAuthenticated, isTechnician, serviceRequestController.acceptJob);
+router.patch('/:id/reject', verifyToken, isAuthenticated, isTechnician, serviceRequestController.rejectJob);
 router.patch('/:id/status', verifyToken, isAuthenticated, isTechnician, serviceRequestController.updateJobStatus);
 router.patch('/:id/complete', verifyToken, isAuthenticated, isTechnician, serviceRequestController.completeJob);
 router.delete('/:id/cancel', verifyToken, isAuthenticated, isTechnician, serviceRequestController.cancelJob);

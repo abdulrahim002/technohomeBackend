@@ -3,6 +3,13 @@
 const mongoose = require('mongoose');
 
 const CitySchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    index: true // المعرف الثابت المربوط بملف الـ JSON
+  },
   name: {
     type: String,
     required: [true, 'اسم المدينة مطلوب'],
@@ -18,6 +25,14 @@ const CitySchema = new mongoose.Schema({
     type: String,
     required: [true, 'اسم المدينة بالإنجليزية مطلوب'],
     trim: true
+  },
+  latitude: {
+    type: Number,
+    default: 32.8872
+  },
+  longitude: {
+    type: Number,
+    default: 13.1913
   },
   isActive: {
     type: Boolean,

@@ -3,13 +3,14 @@ const ApplianceType = require('../../models/ApplianceType.model');
 const User = require('../../models/User.model');
 const GeminiService = require('../ai/gemini.service');
 const mongoose = require('mongoose');
+const notificationService = require('../notificationService');
 
 class OrderCreationService {
   /**
    * إنشاء طلب صيانة هجين (حفظ سريع + تشخيص ذكي بمهلة زمنية)
    */
   async createRequest(payload, userId) {
-    const { id, applianceType, brand, problemDescription, serviceAddress, images, technicianId, scheduledDate, diagnosisType } = payload;
+    const { id, applianceType, brand, problemDescription, serviceAddress, images, technicianId, scheduledDate, timeSlot, diagnosisType } = payload;
 
     console.log('--- [SERVICE] STARTING UNIFIED HYBRID REQUEST ---');
 
@@ -36,6 +37,12 @@ class OrderCreationService {
     if (payload.preComputedDiagnosis) {
       console.log('[SERVICE] Using pre-computed diagnosis from client.');
       aiDiagnosis = payload.preComputedDiagnosis;
+    } else if (diagnosisType === 'manual' || diagnosisType === 'none') {
+      console.log('[SERVICE] Manual/None flow detected, skipping AI.');
+      aiDiagnosis = { 
+        diagnosis: problemDescription, 
+        steps: ['يرجى انتظار الفني للمعاينة الميدانية.'] 
+      };
     } else {
       try {
         const quota = await GeminiService.checkQuota(userId);
@@ -77,13 +84,55 @@ class OrderCreationService {
       };
     }
 
+    // ✅ جدار حماية Backend: التحقق من صحة التاريخ والوقت قبل إنشاء الحجز
+    if (technicianId && scheduledDate && timeSlot) {
+      const BOOKING_LEAD_TIME_HOURS = 4; // مهلة التحضير الأدنى بالساعات
+
+      // استخدام Intl API للحصول على التاريخ والوقت الدقيق بتوقيت ليبيا
+      const getLibyaDateTime = () => {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Africa/Tripoli',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        const parts = formatter.formatToParts(now);
+        const get = (type) => parts.find(p => p.type === type)?.value || '0';
+        const todayStr = `${get('year')}-${get('month')}-${get('day')}`;
+        const currentDecimalHour = parseInt(get('hour'), 10) + parseInt(get('minute'), 10) / 60;
+        return { todayStr, currentDecimalHour };
+      };
+
+      const { todayStr, currentDecimalHour } = getLibyaDateTime();
+
+      // جدار 1: منع الحجز في تواريخ ماضية
+      if (scheduledDate < todayStr) {
+        throw { status: 400, message: 'لا يمكن الحجز في تواريخ ماضية.' };
+      }
+
+      // جدار 2: للحجز في نفس اليوم، التحقق من هامش الأمان (4 ساعات)
+      if (scheduledDate === todayStr) {
+        const slotStartHour = parseInt(timeSlot.split('-')[0].split(':')[0], 10);
+        const hoursUntilSlot = slotStartHour - currentDecimalHour;
+
+        if (hoursUntilSlot < BOOKING_LEAD_TIME_HOURS) {
+          const slotLabel = timeSlot.replace('-', ' - ');
+          throw {
+            status: 400,
+            message: `لا يمكن الحجز للفترة (${slotLabel}). يلزم ${BOOKING_LEAD_TIME_HOURS} ساعات على الأقل قبل بدء الفترة الزمنية.`
+          };
+        }
+      }
+    }
+
     const requestData = {
       customer: userId,
       applianceType,
       brand,
       problemDescription,
       scheduledDate,
-      technician: technicianId || undefined,
+      timeSlot,
+      technician: (technicianId && mongoose.Types.ObjectId.isValid(technicianId)) ? technicianId : undefined,
       serviceAddress: finalServiceAddress,
       images: images && images.length > 0 ? images : undefined,
       diagnosisType: diagnosisType || 'none',
@@ -114,6 +163,19 @@ class OrderCreationService {
     }
 
     console.log('--- [SERVICE] HYBRID REQUEST SAVED SUCCESSFULLY! ---');
+
+    // إرسال إشعار للفني إذا تم تعيينه
+    if (request.technician && request.status === 'pending') {
+      notificationService.createNotification({
+        recipientId: request.technician,
+        senderId: userId,
+        title: 'طلب صيانة جديد 🛠️',
+        message: `لديك طلب جديد لصيانة (${applianceName}). يرجى المراجعة والقبول.`,
+        type: 'order',
+        relatedId: request._id
+      }).catch(err => console.error('[NOTIFICATION_ERROR] Failed to notify tech:', err.message));
+    }
+
     return request;
   }
 

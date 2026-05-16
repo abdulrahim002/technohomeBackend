@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ClipboardList, Calendar, Search } from 'lucide-react-native';
-import { useBookings } from '../../../hooks/useBookings';
-import BookingCard from '../../../components/main/BookingCard';
+import { useBookings } from '../../hooks/useBookings';
+import BookingCard from '../../components/main/BookingCard';
+import RatingModal from '../../components/main/RatingModal';
+import { submitReview } from '../../api/requestService';
+import { Alert } from 'react-native';
 
 /**
  * BookingsScreen - Professional Requests History
@@ -27,6 +30,39 @@ const BookingsScreen = ({ navigation }) => {
     handleDeleteRequest
   } = useBookings();
 
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingRequestId, setRatingRequestId] = useState(null);
+
+  const handleRate = (requestId) => {
+    setRatingRequestId(requestId);
+    setRatingModalVisible(true);
+  };
+
+  const handleSubmitReview = async (rating, comment) => {
+    const result = await submitReview(ratingRequestId, rating, comment);
+    if (result.success) {
+      Alert.alert('شكراً لك ⭐', 'تم إرسال تقييمك بنجاح.');
+      setRatingModalVisible(false);
+      setRatingRequestId(null);
+      onRefresh();
+    } else {
+      Alert.alert('خطأ', result.message);
+    }
+  };
+
+  const handleRebook = (item) => {
+    // نقل بيانات الطلب المنتهي/المرفوض إلى شاشة البحث عن فني بديل
+    navigation.navigate('TechnicianList', {
+      applianceType: item.applianceType?._id || item.applianceType,
+      brand: item.brand,
+      problemDescription: item.problemDescription,
+      images: item.images,
+      cityId: item.serviceAddress?.cityId?._id || item.serviceAddress?.cityId,
+      diagnosisType: item.diagnosisType || 'none',
+      aiDiagnosis: item.aiDiagnosis
+    });
+  };
+
   const renderItem = ({ item }) => (
     <BookingCard 
       item={item}
@@ -36,8 +72,10 @@ const BookingsScreen = ({ navigation }) => {
       onChat={() => navigation.navigate('Chat', {
         requestId: item._id,
         recipientId: item.technician?._id || item.technician,
-        recipientName: item.technician?.fullName || 'الفني'
+        recipientName: item.technician ? `${item.technician.firstName || ''} ${item.technician.lastName || ''}` : 'الفني'
       })}
+      onRate={() => handleRate(item._id)}
+      onRebook={() => handleRebook(item)}
     />
   );
 
@@ -61,7 +99,7 @@ const BookingsScreen = ({ navigation }) => {
           <FlatList
             data={requests}
             renderItem={renderItem}
-            keyExtractor={item => item._id}
+            keyExtractor={(item, index) => item._id || index.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
@@ -83,6 +121,13 @@ const BookingsScreen = ({ navigation }) => {
           />
         )}
       </View>
+
+      {/* Rating Modal */}
+      <RatingModal 
+        visible={ratingModalVisible}
+        onClose={() => setRatingModalVisible(false)}
+        onConfirm={handleSubmitReview}
+      />
     </SafeAreaView>
   );
 };

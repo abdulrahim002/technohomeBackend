@@ -38,4 +38,11 @@ router.post('/brands', adminController.createBrand);
 router.patch('/brands/:id', adminController.updateBrand);
 router.delete('/brands/:id', adminController.deleteBrand);
 
+// إدارة المدن (Cities)
+router.get('/cities', adminController.getAllCities);
+router.post('/cities/sync', adminController.syncLocations);
+router.post('/cities', adminController.createCity);
+router.patch('/cities/:id', adminController.updateCity);
+router.delete('/cities/:id', adminController.deleteCity);
+
 module.exports = router;

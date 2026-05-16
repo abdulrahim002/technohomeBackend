@@ -10,7 +10,8 @@ import {
   LogOut,
   ShieldCheck,
   ClipboardList,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 
 const Sidebar = ({ onLogout }) => {
@@ -22,6 +23,7 @@ const Sidebar = ({ onLogout }) => {
     { name: 'أنواع الأجهزة', icon: <Package size={20} />, path: '/appliances' },
     { name: 'الماركات التجارية', icon: <Tag size={20} />, path: '/brands' },
     { name: 'أكواد الأعطال', icon: <AlertTriangle size={20} />, path: '/error-codes' },
+    { name: 'المدن', icon: <MapPin size={20} />, path: '/cities' },
   ];
 
   return (

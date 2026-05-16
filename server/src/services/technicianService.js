@@ -1,5 +1,6 @@
  const TechnicianProfile = require('../models/TechnicianProfile.model');
 const User = require('../models/User.model');
+const ServiceRequest = require('../models/ServiceRequest.model');
 
 /**
  * خدمة إدارة الفنيين (Technician Discovery Service)
@@ -8,49 +9,114 @@ const User = require('../models/User.model');
 class TechnicianService {
   /**
    * البحث عن فنيين متاحين بناءً على التخصص والمدينة
-   * @param {string} applianceTypeId - معرف نوع الجهاز (ObjectId)
-   * @param {string} cityId - معرف المدينة (ObjectId)
    */
   async findTechniciansForBooking(applianceTypeId, cityId) {
     try {
-      // 1. البحث عن بروفايلات الفنيين (فلترة التخصص والتوثيق)
-      const query = {};
+      const query = {
+        isAvailable: true,
+        isVerified: true
+      };
+      
       if (applianceTypeId) query.specialties = applianceTypeId;
       
-      console.log(`[DEBUG] Finding techs for appliance: ${applianceTypeId}, city: ${cityId}`);
+      console.log(`[DEBUG] Finding available techs for appliance: ${applianceTypeId}, city: ${cityId}`);
 
       const techProfiles = await TechnicianProfile.find(query).populate({
         path: 'user',
         select: 'firstName lastName phone city profileImage',
+        populate: { path: 'city', select: 'name nameAr' }
       });
 
-      // 2. تصفية النتائج يدوياً للتأكد من مطابقة المدينة (String vs ObjectId)
-      const filteredTechs = techProfiles
-        .filter(profile => {
-          if (!profile.user) return false;
-          // تحويل المعرفات لنصوص للمقارنة الدقيقة
-          const userCity = profile.user.city?.toString();
-          const targetCity = cityId?.toString();
-          return !targetCity || userCity === targetCity;
-        })
-        .map(profile => ({
-          techId: profile.user._id,
-          fullName: `${profile.user.firstName} ${profile.user.lastName}`,
-          phone: profile.user.phone,
-          city: profile.user.city,
-          rating: profile.rating,
-          reviewCount: profile.reviewCount,
-          yearsOfExperience: profile.yearsOfExperience,
-          bio: profile.bio,
-          profileImage: profile.profileImage
-        }));
+      // تصفية النتائج حسب المدينة (بناءً على الـ ID أو الاسم الفريد)
+      const filtered = techProfiles.filter(profile => {
+        if (!profile.user || !profile.user.city) return false;
+        if (!cityId) return true;
 
-      console.log(`[DEBUG] Found ${filteredTechs.length} technicians`);
-      return filteredTechs;
+        const cityObj = profile.user.city;
+        const userCityId = cityObj._id?.toString() || cityObj.toString();
+        const userCityName = cityObj.name; // الحقل 'name' في موديل City يمثل الـ slug عادة
+
+        return userCityId === cityId || userCityName === cityId;
+      });
+
+      // جلب عدد المهام المكتملة لكل فني دفعة واحدة
+      const techIds = filtered.map(p => p.user._id);
+      const completedCounts = await ServiceRequest.aggregate([
+        { $match: { technician: { $in: techIds }, status: 'completed' } },
+        { $group: { _id: '$technician', count: { $sum: 1 } } }
+      ]);
+      const completedMap = {};
+      completedCounts.forEach(c => { completedMap[c._id.toString()] = c.count; });
+
+      const result = filtered.map(profile => ({
+        _id: profile.user._id,
+        techId: profile.user._id,
+        fullName: `${profile.user.firstName} ${profile.user.lastName}`,
+        firstName: profile.user.firstName,
+        lastName: profile.user.lastName,
+        phone: profile.user.phone,
+        city: profile.user.city?.nameAr || profile.user.city,
+        rating: profile.rating || 0,
+        reviewCount: profile.reviewCount || 0,
+        completedJobs: completedMap[profile.user._id.toString()] || 0,
+        yearsOfExperience: profile.yearsOfExperience || 0,
+        reliabilityScore: profile.reliabilityScore || 0,
+        bio: profile.bio,
+        profileImage: profile.profileImage,
+        isOnline: profile.isAvailable
+      }));
+
+      console.log(`[DEBUG] Found ${result.length} technicians`);
+      return result;
     } catch (error) {
       console.error('Error finding technicians:', error);
       throw error;
     }
+  }
+
+  /**
+   * جلب بروفايل فني عام (للعميل) مع آخر التقييمات
+   */
+  async getTechnicianPublicProfile(techId) {
+    const Review = require('../models/Review.model');
+
+    const profile = await TechnicianProfile.findOne({ user: techId })
+      .populate({
+        path: 'user',
+        select: 'firstName lastName phone city profileImage',
+        populate: { path: 'city', select: 'name nameAr' }
+      })
+      .populate('specialties', 'nameAr')
+      .lean();
+
+    if (!profile) throw { status: 404, message: 'الفني غير موجود' };
+
+    // عدد المهام المكتملة
+    const completedJobs = await ServiceRequest.countDocuments({ technician: techId, status: 'completed' });
+
+    // آخر التقييمات
+    const reviews = await Review.find({ technician: techId })
+      .populate('customer', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    return {
+      _id: profile.user._id,
+      fullName: `${profile.user.firstName} ${profile.user.lastName}`,
+      phone: profile.user.phone,
+      city: profile.user.city?.nameAr || profile.user.city,
+      profileImage: profile.profileImage,
+      rating: profile.rating || 0,
+      reviewCount: profile.reviewCount || 0,
+      completedJobs,
+      yearsOfExperience: profile.yearsOfExperience || 0,
+      reliabilityScore: profile.reliabilityScore || 0,
+      specialties: profile.specialties || [],
+      bio: profile.bio,
+      isVerified: profile.isVerified,
+      reviews
+    };
   }
 }
 

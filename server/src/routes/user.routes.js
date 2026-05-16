@@ -10,6 +10,7 @@ router.get('/profile',          verifyToken, isAuthenticated, userController.get
 router.patch('/profile',        verifyToken, isAuthenticated, userController.updateUserProfile);
 router.patch('/location',       verifyToken, isAuthenticated, userController.updateLocation);
 router.patch('/fcm-token',      verifyToken, isAuthenticated, userController.updateFcmToken);
+router.patch('/expo-push-token', verifyToken, isAuthenticated, userController.updateExpoPushToken);
 router.get('/wallet/history',    verifyToken, isAuthenticated, userController.getWalletHistory);
 router.get('/wallet/export',     verifyToken, isAuthenticated, userController.exportMyWallet);
 

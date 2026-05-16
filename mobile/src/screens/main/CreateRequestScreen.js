@@ -4,10 +4,8 @@ import {
   Image, TouchableOpacity, ActivityIndicator, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Cpu, Tag, FileText, Camera, ChevronLeft, Zap, ArrowRight, X, MapPin } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import { getApplianceTypes, getBrands } from '../../api/lookupService';
+import { Cpu, Tag, FileText, ChevronLeft, Zap, ArrowRight, X } from 'lucide-react-native';
+import { useLookups } from '../../hooks/useLookups';
 import { analyzeProblem } from '../../api/requestService';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,12 +15,9 @@ import { useAuth } from '../../context/AuthContext';
  */
 export default function CreateRequestScreen({ route, navigation }) {
   const { user } = useAuth();
+  const { appliances, brands, loading: lookupLoading } = useLookups();
   const [loading, setLoading] = useState(false);
-  const [appliances, setAppliances] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [selectedImages, setSelectedImages] = useState([]);
   const [step, setStep] = useState(1); // 1=device, 2=brand, 3=description
-  const [location, setLocation] = useState(null);
 
   const [formData, setFormData] = useState({
     applianceType: '',
@@ -30,48 +25,9 @@ export default function CreateRequestScreen({ route, navigation }) {
     problemDescription: '',
   });
 
-  // Pre-fill from error code flow
-  useEffect(() => {
-    if (route.params?.prefilled) {
-      const { applianceType, brand, errorCode } = route.params.prefilled;
-      setFormData(prev => ({
-        ...prev,
-        applianceType: applianceType || prev.applianceType,
-        brand: brand || prev.brand,
-        problemDescription: errorCode 
-          ? `لدي مشكلة، يظهر لي كود الخطأ: ${errorCode}` 
-          : prev.problemDescription
-      }));
-      if (applianceType) setStep(2);
-      if (brand) setStep(3);
-    }
-  }, [route.params?.prefilled]);
+  // إزالة الكود القديم الخاص بجلب البيانات المسبقة، هذا المسار مخصص للـ AI فقط
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [applianceData, brandData] = await Promise.all([
-          getApplianceTypes(),
-          getBrands()
-        ]);
-        setAppliances(applianceData);
-        setBrands(brandData);
-
-        // Request Location
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({});
-          setLocation({
-            type: 'Point',
-            coordinates: [loc.coords.longitude, loc.coords.latitude]
-          });
-        }
-      } catch (err) {
-        console.error('Fetch lookup/location counts failed', err);
-      }
-    };
-    fetchData();
-  }, []);
+  // جلب البيانات يتم عبر الـ hook الآن
 
   // Filter brands by selected appliance type
   const filteredBrands = formData.applianceType
@@ -82,17 +38,7 @@ export default function CreateRequestScreen({ route, navigation }) {
       )
     : brands;
 
-  const pickImages = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.7,
-      selectionLimit: 5,
-    });
-    if (!result.canceled) {
-      setSelectedImages([...selectedImages, ...result.assets.map(a => a.uri)].slice(0, 5));
-    }
-  };
+
 
   const handleAnalyze = async () => {
     if (!formData.applianceType || !formData.brand || !formData.problemDescription) {
@@ -111,34 +57,9 @@ export default function CreateRequestScreen({ route, navigation }) {
       timedOut: result.timedOut || false,
       bookingData: {
         ...formData,
+        applianceName: appliances.find(a => a._id === formData.applianceType)?.nameAr,
         cityId: user?.city?._id || user?.city,
-        location: location, // Pass GPS location
-        imagesUris: selectedImages,
         diagnosisType: 'ai'
-      }
-    });
-  };
-
-  const handleDirectBooking = () => {
-    if (!formData.applianceType || !formData.brand || !formData.problemDescription) {
-      Alert.alert('تنبيه', 'يرجى ملء جميع الحقول');
-      return;
-    }
-    navigation.navigate('DiagnosisResult', {
-      isManual: true,
-      diagnosisData: {
-        aiDiagnosis: {
-          diagnosis: `تم إدخال كود الخطأ: ${route.params?.prefilled?.errorCode}`,
-          steps: ['تم تشخيص المشكلة يدوياً، يرجى الاستمرار لطلب الفني المختص.']
-        }
-      },
-      timedOut: false,
-      bookingData: {
-        ...formData,
-        cityId: user?.city?._id || user?.city,
-        location: location, // Pass GPS location
-        imagesUris: selectedImages,
-        diagnosisType: 'manual'
       }
     });
   };
@@ -271,33 +192,7 @@ export default function CreateRequestScreen({ route, navigation }) {
               onChangeText={val => setFormData({ ...formData, problemDescription: val })}
             />
 
-            {/* Image Upload */}
-            <TouchableOpacity style={styles.uploadBtn} onPress={pickImages} activeOpacity={0.8}>
-              <Camera size={20} color="#4F46E5" />
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={styles.uploadBtnText}>إضافة صور العطل</Text>
-                <Text style={styles.uploadBtnSub}>حتى 5 صور — اختياري</Text>
-              </View>
-              <View style={styles.uploadCount}>
-                <Text style={styles.uploadCountText}>{selectedImages.length}/5</Text>
-              </View>
-            </TouchableOpacity>
 
-            {selectedImages.length > 0 && (
-              <View style={styles.imagePreviewRow}>
-                {selectedImages.map((uri, index) => (
-                  <View key={index} style={styles.imageWrapper}>
-                    <Image source={{ uri }} style={styles.previewImage} />
-                    <TouchableOpacity 
-                      style={styles.removeImageBtn}
-                      onPress={() => setSelectedImages(selectedImages.filter((_, i) => i !== index))}
-                    >
-                      <X size={12} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         )}
 
@@ -314,16 +209,6 @@ export default function CreateRequestScreen({ route, navigation }) {
               <Text style={styles.loadingSub}>قد يستغرق حتى 20 ثانية</Text>
             </View>
           </View>
-        ) : route.params?.prefilled?.errorCode ? (
-          <TouchableOpacity
-            style={[styles.submitBtn, { backgroundColor: '#10B981' }, !canProceed && styles.submitBtnDisabled]}
-            onPress={handleDirectBooking}
-            disabled={!canProceed}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.submitBtnText}>تأكيد ومتابعة الحجز</Text>
-            <ArrowRight size={20} color="white" />
-          </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={[styles.submitBtn, !canProceed && styles.submitBtnDisabled]}

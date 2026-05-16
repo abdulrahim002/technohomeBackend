@@ -1,0 +1,66 @@
+[
+  {
+    "id": "tripoli",
+    "nameAr": "طرابلس",
+    "nameEn": "Tripoli",
+    "latitude": 32.8872,
+    "longitude": 13.1913,
+    "areas": [
+      { "id": "tajoura", "nameAr": "تاجوراء", "nameEn": "Tajoura" },
+      { "id": "hay_andalus", "nameAr": "حي الأندلس", "nameEn": "Hay Al-Andalus" },
+      { "id": "souq_jumaa", "nameAr": "سوق الجمعة", "nameEn": "Souq Al-Jumaa" },
+      { "id": "abu_salim", "nameAr": "أبوسليم", "nameEn": "Abu Salim" },
+      { "id": "janzoor", "nameAr": "جنزور", "nameEn": "Janzoor" },
+      { "id": "bin_ghashir", "nameAr": "قصر بن غشير", "nameEn": "Qasr Bin Ghashir" },
+      { "id": "hadba", "nameAr": "الهضبة", "nameEn": "Al-Hadba" }
+    ]
+  },
+  {
+    "id": "benghazi",
+    "nameAr": "بنغازي",
+    "nameEn": "Benghazi",
+    "latitude": 32.1194,
+    "longitude": 20.0667,
+    "areas": [
+      { "id": "berka", "nameAr": "البركة", "nameEn": "Al-Berka" },
+      { "id": "leithi", "nameAr": "الليثي", "nameEn": "Al-Leithi" },
+      { "id": "hawari", "nameAr": "الهواري", "nameEn": "Al-Hawari" },
+      { "id": "sidi_hussein", "nameAr": "سيدي حسين", "nameEn": "Sidi Hussein" },
+      { "id": "selmani", "nameAr": "السلماني", "nameEn": "Al-Selmani" }
+    ]
+  },
+  {
+    "id": "misrata",
+    "nameAr": "مصراتة",
+    "nameEn": "Misrata",
+    "latitude": 32.3754,
+    "longitude": 15.0925,
+    "areas": [
+      { "id": "qasr_ahmed", "nameAr": "قصر أحمد", "nameEn": "Qasr Ahmed" },
+      { "id": "zureiq", "nameAr": "الزريق", "nameEn": "Al-Zureiq" },
+      { "id": "ghoushi", "nameAr": "الغوشي", "nameEn": "Al-Ghoushi" }
+    ]
+  },
+  {
+    "id": "zawiya",
+    "nameAr": "الزاوية",
+    "nameEn": "Zawiya",
+    "latitude": 32.7522,
+    "longitude": 12.7244,
+    "areas": [
+      { "id": "zawiya_center", "nameAr": "وسط الزاوية", "nameEn": "Zawiya Center" },
+      { "id": "harsha", "nameAr": "الحرشة", "nameEn": "Al-Harsha" }
+    ]
+  },
+  {
+    "id": "sebha",
+    "nameAr": "سبها",
+    "nameEn": "Sebha",
+    "latitude": 27.0377,
+    "longitude": 14.4283,
+    "areas": [
+      { "id": "manshiya", "nameAr": "المنشية", "nameEn": "Al-Manshiya" },
+      { "id": "qardha", "nameAr": "القرضة", "nameEn": "Al-Qardha" }
+    ]
+  }
+]

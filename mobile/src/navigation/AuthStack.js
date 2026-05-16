@@ -3,8 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import LoginScreen from '../screens/auth/LoginScreen';
 import RoleSelectionScreen from '../screens/auth/RoleSelectionScreen';
-import CustomerRegisterScreen from '../screens/auth/CustomerRegisterScreen';
-import TechnicianRegisterScreen from '../screens/auth/TechnicianRegisterScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
@@ -22,8 +21,8 @@ export default function AuthStack() {
       <Stack.Screen name="OTP" component={OTPScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-      <Stack.Screen name="RegisterCustomer" component={CustomerRegisterScreen} />
-      <Stack.Screen name="RegisterTechnician" component={TechnicianRegisterScreen} />
+      <Stack.Screen name="RegisterCustomer" component={RegisterScreen} />
+      <Stack.Screen name="RegisterTechnician" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }

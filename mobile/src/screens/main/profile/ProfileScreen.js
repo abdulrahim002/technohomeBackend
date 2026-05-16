@@ -25,6 +25,7 @@ import {
 import useAuthStore from '../../../store/useAuthStore';
 import ProfileMenuItem from '../../../components/profile/ProfileMenuItem';
 import ProfileStatCard from '../../../components/profile/ProfileStatCard';
+import { sendLocalTestNotification } from '../../../services/NotificationService';
 
 /**
  * شاشة الملف الشخصي المطورة (Profile Screen v2)
@@ -110,6 +111,12 @@ const ProfileScreen = ({ navigation }) => {
           label="الإشعارات" 
           onPress={() => {}} 
           color="#EF4444"
+        />
+        <ProfileMenuItem 
+          icon={Zap} 
+          label="تجربة الإشعارات (اختبار)" 
+          onPress={sendLocalTestNotification} 
+          color="#8B5CF6"
         />
 
         {/* مجموعة الدعم والمعلومات */}

@@ -21,7 +21,7 @@ import {
   Wallet,
   Award
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTechnician } from '../../../hooks/useTechnician';
 import StatCard from '../../../components/common/StatCard';
 
@@ -41,8 +41,16 @@ const TechnicianDashboard = () => {
     isOnline,
     toggleOnline,
     greeting,
-    stats
+    stats,
+    refresh
   } = useTechnician();
+
+  // تحديث البيانات في كل مرة تظهر فيها الشاشة
+  useFocusEffect(
+    React.useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -88,22 +96,19 @@ const TechnicianDashboard = () => {
 
         {/* Dynamic Stats Cards */}
         <View style={styles.statsGrid}>
-           <TouchableOpacity 
-             style={styles.statCard} 
-             onPress={() => navigation.navigate('WalletHistory')}
-           >
-              <View style={[styles.iconCircle, { backgroundColor: '#EEF2FF' }]}>
-                 <Wallet size={20} color="#4F46E5" />
-              </View>
-              <Text style={styles.statValue}>{stats.walletBalance}</Text>
-              <Text style={styles.statLabel}>رصيد المحفظة (د.ل)</Text>
-           </TouchableOpacity>
-           
            <View style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}>
               <View style={[styles.iconCircle, { backgroundColor: '#DCFCE7' }]}>
-                 <Award size={20} color="#10B981" />
+                 <CheckCircle size={20} color="#10B981" />
               </View>
-              <Text style={[styles.statValue, { color: '#10B981' }]}>{stats.reliabilityScore}</Text>
+              <Text style={[styles.statValue, { color: '#10B981' }]}>{stats.completedJobs}</Text>
+              <Text style={styles.statLabel}>مهمة مكتملة</Text>
+           </View>
+           
+           <View style={[styles.statCard, { backgroundColor: '#EEF2FF' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
+                 <Award size={20} color="#4F46E5" />
+              </View>
+              <Text style={[styles.statValue, { color: '#4F46E5' }]}>{stats.reliabilityScore}%</Text>
               <Text style={styles.statLabel}>نقاط الموثوقية</Text>
            </View>
         </View>
@@ -142,18 +147,21 @@ const TechnicianDashboard = () => {
            </View>
            <View style={styles.actionTextContent}>
               <Text style={styles.actionMainTitle}>الطلبات الحالية</Text>
-              <Text style={styles.actionSubTitle}>لديك {stats.activeJobsCount} مهام قيد التنفيذ الآن</Text>
+              <Text style={styles.actionSubTitle}>لديك {stats.activeJobsCount} طلب الآن</Text>
            </View>
            <ChevronLeft size={20} color="#94A3B8" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity 
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('HistoryTab')}
+        >
            <View style={[styles.actionIconContainer, { backgroundColor: '#F0F9FF' }]}>
               <Clock size={24} color="#0EA5E9" />
            </View>
            <View style={styles.actionTextContent}>
               <Text style={styles.actionMainTitle}>تاريخ العمليات</Text>
-              <Text style={styles.actionSubTitle}>استعراض المهام المكتملة والتقارير</Text>
+              <Text style={styles.actionSubTitle}>{stats.completedJobs} مهمة مكتملة</Text>
            </View>
            <ChevronLeft size={20} color="#94A3B8" />
         </TouchableOpacity>

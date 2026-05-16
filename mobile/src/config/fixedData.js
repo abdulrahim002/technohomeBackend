@@ -4,12 +4,17 @@
  */
 
 export const LIBYAN_CITIES = [
-  { id: 'tripoli', nameAr: 'طرابلس', slug: 'tripoli' },
-  { id: 'benghazi', nameAr: 'بنغازي', slug: 'benghazi' },
-  { id: 'misrata', nameAr: 'مصراتة', slug: 'misrata' },
-  { id: 'zawiya', nameAr: 'الزاوية', slug: 'zawiya' },
-  { id: 'sebha', nameAr: 'سبها', slug: 'sebha' },
+  { id: 'tripoli', nameAr: 'طرابلس', slug: 'tripoli', coords: { latitude: 32.8872, longitude: 13.1913 } },
+  { id: 'benghazi', nameAr: 'بنغازي', slug: 'benghazi', coords: { latitude: 32.1859, longitude: 20.0717 } },
+  { id: 'misrata', nameAr: 'مصراتة', slug: 'misrata', coords: { latitude: 32.3754, longitude: 15.0925 } },
+  { id: 'zawiya', nameAr: 'الزاوية', slug: 'zawiya', coords: { latitude: 32.7522, longitude: 12.7244 } },
+  { id: 'sebha', nameAr: 'سبها', slug: 'sebha', coords: { latitude: 27.0377, longitude: 14.4283 } },
 ];
+
+export const getCityCoords = (id) => {
+  const city = LIBYAN_CITIES.find(c => c.id === id);
+  return city ? city.coords : { latitude: 32.8872, longitude: 13.1913 };
+};
 
 export const APPLIANCE_TYPES = [
   { id: '69d1aede0b9f1ed86b3e29f5', nameAr: 'غسالات ملابس', slug: 'washing_machines', icon: '🧺' },
@@ -25,6 +30,7 @@ export const getCityNameAr = (id) => {
 };
 
 export const getApplianceNameAr = (idOrSlug) => {
+  if (!idOrSlug) return 'جهاز عام';
   const type = APPLIANCE_TYPES.find(t => t.id === idOrSlug || t.slug === idOrSlug);
-  return type ? type.nameAr : 'جهاز عام';
+  return type ? type.nameAr : (typeof idOrSlug === 'string' && idOrSlug.length > 10 ? 'جهاز صيانة' : idOrSlug);
 };

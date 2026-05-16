@@ -9,7 +9,7 @@ import {
   ActivityIndicator, 
   Alert 
 } from 'react-native';
-import { getApplianceTypes, getBrands } from '../../api/lookupService';
+import { useLookups } from '../../hooks/useLookups';
 import { searchErrorCode } from '../../api/errorCodeService';
 import { Wrench, ShieldAlert, ChevronRight, Search, ChevronLeft } from 'lucide-react-native';
 
@@ -20,10 +20,8 @@ import { Wrench, ShieldAlert, ChevronRight, Search, ChevronLeft } from 'lucide-r
  *  
  */
 export default function ManualDiagnosisScreen({ navigation }) {
-  const [loading, setLoading] = useState(true);
+  const { appliances, brands, loading } = useLookups();
   const [searching, setSearching] = useState(false);
-  const [appliances, setAppliances] = useState([]);
-  const [brands, setBrands] = useState([]);
   
   const [step, setStep] = useState(1); // 1: Device, 2: Brand, 3: Search
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -31,24 +29,7 @@ export default function ManualDiagnosisScreen({ navigation }) {
   const [errorCode, setErrorCode] = useState('');
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [appData, brandData] = await Promise.all([
-        getApplianceTypes(),
-        getBrands()
-      ]);
-      setAppliances(appData);
-      setBrands(brandData);
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      Alert.alert('خطأ', 'فشل تحميل البيانات الأساسية');
-    }
-  };
+  // جلب البيانات يتم عبر الـ hook الآن
 
   const currentBrands = brands.filter(b => 
     selectedDevice && b.applianceTypes?.some(a => (a._id || a) === selectedDevice._id)
@@ -188,14 +169,20 @@ export default function ManualDiagnosisScreen({ navigation }) {
                 <Text style={styles.actionStep}>{result.actionStep}</Text>
               </View>
 
+              {/* انتقال مباشر لقائمة الفنيين دون المرور بشاشات الذكاء الاصطناعي (Clean Code) */}
               <TouchableOpacity 
                 style={styles.requestBtn}
-                onPress={() => navigation.navigate('CreateRequest', {
-                  prefilled: {
+                onPress={() => navigation.navigate('TechnicianList', {
+                  bookingData: {
                     applianceType: selectedDevice._id,
                     brand: selectedBrand.nameEn,
-                    errorCode: result.code,
+                    problemDescription: `كود الخطأ المكتشف: ${result.code} - ${result.description}`,
                     diagnosisType: 'manual'
+                  },
+                  diagnosisData: {
+                    code: result.code,
+                    description: result.description,
+                    actionStep: result.actionStep
                   }
                 })}
               >

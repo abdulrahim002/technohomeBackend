@@ -52,6 +52,8 @@ const Technicians = () => {
         walletBalance: t.user?.walletBalance || 0,
         rating: t.rating || 0,
         reviewCount: t.reviewCount || 0,
+        yearsOfExperience: t.yearsOfExperience || 0,
+        certificates: t.certificates || [],
         isPending: filter === 'pending'
       }));
         
@@ -243,14 +245,36 @@ const Technicians = () => {
                           </div>
                           <div className="glass-card p-6 flex items-center justify-between">
                              <div>
-                                <p className="text-slate-500 text-[10px] font-black uppercase mb-1">متوسط التقييم</p>
-                                <h3 className="text-2xl font-black text-slate-900 font-outfit">⭐ {selectedTech.rating}</h3>
+                                <p className="text-slate-500 text-[10px] font-black uppercase mb-1">سنوات الخبرة</p>
+                                <h3 className="text-2xl font-black text-slate-900 font-outfit">{selectedTech.yearsOfExperience} سنوات</h3>
                              </div>
                              <div className="p-3 bg-amber-500/10 rounded-2xl">
-                                <Star className="text-amber-500" size={24} />
+                                <Calendar className="text-amber-500" size={24} />
                              </div>
                           </div>
                        </div>
+                       
+                       {selectedTech.certificates?.length > 0 && (
+                          <div className="space-y-4">
+                             <h4 className="text-slate-900 font-black text-lg text-right pr-2">الشهادات والمستندات</h4>
+                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {selectedTech.certificates.map((cert, idx) => (
+                                  <a 
+                                    key={idx} 
+                                    href={`${import.meta.env.VITE_API_URL}/${cert}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 hover:border-indigo-500 transition-all group"
+                                  >
+                                     <img src={`${import.meta.env.VITE_API_URL}/${cert}`} alt="" className="w-full h-full object-cover" />
+                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                        <Eye size={20} className="text-white" />
+                                     </div>
+                                  </a>
+                                ))}
+                             </div>
+                          </div>
+                        )}
 
                        <div className="space-y-4">
                           <h4 className="text-slate-900 font-black text-lg text-right pr-2">التخصصات والماركات</h4>

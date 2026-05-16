@@ -25,6 +25,24 @@ const TechnicianActiveJobs = () => {
   const navigation = useNavigation();
   const { jobs, loading, refreshing, onRefresh } = useTechnicianJobs();
 
+  const processJobsForConflicts = (allJobs) => {
+    return allJobs.map(job => {
+      let hasConflict = false;
+      if (job.status === 'pending' && job.scheduledDate && job.timeSlot) {
+        const conflicts = allJobs.filter(j => 
+          j._id !== job._id && 
+          (j.status === 'pending' || j.status === 'accepted') && 
+          j.scheduledDate === job.scheduledDate && 
+          j.timeSlot === job.timeSlot
+        );
+        if (conflicts.length > 0) hasConflict = true;
+      }
+      return { ...job, hasConflict };
+    });
+  };
+
+  const processedJobs = processJobsForConflicts(jobs);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -47,11 +65,12 @@ const TechnicianActiveJobs = () => {
         </View>
       ) : (
         <FlatList 
-          data={jobs}
+          data={processedJobs}
           keyExtractor={item => item._id}
           renderItem={({ item }) => (
             <TechnicianJobCard 
               item={item} 
+              hasConflict={item.hasConflict}
               onPress={() => navigation.navigate('TechnicianJobDetails', { requestId: item._id })} 
             />
           )}

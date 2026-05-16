@@ -1,8 +1,10 @@
 const VALID_TRANSITIONS = {
   diagnosed_only: ['pending', 'cancelled'],
   pending: ['accepted', 'cancelled'],
-  accepted: ['arrived', 'cancelled'],
-  arrived: ['completed', 'cancelled'],
+  accepted: ['on_the_way', 'arrived', 'cancelled'],
+  on_the_way: ['arrived', 'cancelled'],
+  arrived: ['in_progress', 'completed', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
   completed: [],
   cancelled: []
 };

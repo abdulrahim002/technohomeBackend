@@ -45,6 +45,18 @@ export const getActiveJobs = async () => {
   }
 };
 
+/**
+ * جلب سجل المهام للفني (المكتملة والملغاة)
+ */
+export const getJobHistory = async () => {
+  try {
+    const response = await api.get('/service-requests/technician/history');
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    return { success: false, message: error.response?.data?.message || 'فشل جلب سجل المهام' };
+  }
+};
+
 // جلب تفاصيل مهمة محددة
 export const getJobDetails = async (id) => {
   try {
@@ -65,10 +77,20 @@ export const acceptJob = async (id) => {
   }
 };
 
-// تحديث الحالة (في الطريق، وصل، جاري العمل)
-export const updateJobStatus = async (id, status) => {
+// رفض المهمة
+export const rejectJob = async (id) => {
   try {
-    const response = await api.patch(`/service-requests/${id}/status`, { status });
+    const response = await api.patch(`/service-requests/${id}/reject`);
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    return { success: false, message: error.response?.data?.message || 'فشل رفض المهمة' };
+  }
+};
+
+// تحديث الحالة (في الطريق، وصل، جاري العمل)
+export const updateJobStatus = async (id, status, techLocation) => {
+  try {
+    const response = await api.patch(`/service-requests/${id}/status`, { status, techLocation });
     return { success: true, data: response.data.data };
   } catch (error) {
     return { success: false, message: error.response?.data?.message || 'فشل تحديث الحالة' };
@@ -76,9 +98,9 @@ export const updateJobStatus = async (id, status) => {
 };
 
 // إتمام المهمة
-export const completeJob = async (id, finalPrice, notes) => {
+export const completeJob = async (id, finalPrice, notes, otp) => {
   try {
-    const response = await api.patch(`/service-requests/${id}/complete`, { finalPrice, notes });
+    const response = await api.patch(`/service-requests/${id}/complete`, { finalPrice, notes, otp });
     return { success: true, data: response.data.data };
   } catch (error) {
     return { success: false, message: error.response?.data?.message || 'فشل إتمام المهمة' };

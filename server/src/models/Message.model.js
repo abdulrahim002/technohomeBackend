@@ -4,7 +4,11 @@ const MessageSchema = new mongoose.Schema({
   serviceRequest: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ServiceRequest',
-    required: true
+    required: false
+  },
+  chatRoomId: {
+    type: String, // Format: "userIdA_userIdB" (sorted IDs)
+    required: false
   },
   sender: {
     type: mongoose.Schema.Types.ObjectId,
@@ -34,5 +38,8 @@ const MessageSchema = new mongoose.Schema({
 
 // Indexing for faster history retrieval
 MessageSchema.index({ serviceRequest: 1, createdAt: 1 });
+MessageSchema.index({ chatRoomId: 1, createdAt: 1 });
+MessageSchema.index({ sender: 1, recipient: 1 });
+MessageSchema.index({ recipient: 1, isRead: 1 });
 
 module.exports = mongoose.model('Message', MessageSchema);

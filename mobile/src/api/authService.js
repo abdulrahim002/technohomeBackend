@@ -26,9 +26,9 @@ export const login = async (phone, password) => {
 
 export const register = async (userData) => {
   try {
-    const response = await api.post('/auth/register', {
-      ...userData,
-      role: 'client' // فرض دور العميل افتراضياً
+    // التحقق مما إذا كانت البيانات FormData (للفنيين) أو كائن عادي (للعملاء)
+    const response = await api.post('/auth/register', userData, {
+      headers: userData instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {}
     });
     return { success: true, data: response.data.data };
   } catch (error) {

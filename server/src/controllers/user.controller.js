@@ -47,6 +47,16 @@ exports.updateFcmToken = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+exports.updateExpoPushToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ status: 'fail', message: 'التوكن مطلوب' });
+    
+    await User.findByIdAndUpdate(req.userId, { expoPushToken: token });
+    res.status(200).json({ status: 'success', message: 'تم تحديث توكن الإشعارات' });
+  } catch (error) { next(error); }
+};
+
 // ==========================================
 // Technician Profile
 // ==========================================

@@ -104,7 +104,7 @@ export default function HomeScreen({ navigation }) {
 
            <TouchableOpacity 
              style={styles.actionCard}
-             onPress={() => navigation.navigate('ManualTab')}
+             onPress={() => navigation.navigate('ManualDiagnosis')}
            >
               <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}>
                  <Search size={24} color="#10B981" />
@@ -112,6 +112,20 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.actionContent}>
                  <Text style={styles.actionTitle}>بحث بأكواد الخطأ</Text>
                  <Text style={styles.actionSub}>هل يظهر لك رمز (E1, F0)؟ ابحث عن معناه</Text>
+              </View>
+              <ChevronRight size={20} color="#CBD5E1" />
+           </TouchableOpacity>
+
+           <TouchableOpacity 
+             style={styles.actionCard}
+             onPress={() => navigation.navigate('TechnicianList')}
+           >
+              <View style={[styles.actionIcon, { backgroundColor: '#FFFBEB' }]}>
+                 <Search size={24} color="#F59E0B" />
+              </View>
+              <View style={styles.actionContent}>
+                 <Text style={styles.actionTitle}>ابحث عن فني مباشرة</Text>
+                 <Text style={styles.actionSub}>اختر التخصص والمدينة واحجز بدون تشخيص</Text>
               </View>
               <ChevronRight size={20} color="#CBD5E1" />
            </TouchableOpacity>

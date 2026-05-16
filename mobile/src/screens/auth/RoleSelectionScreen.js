@@ -25,7 +25,7 @@ const RoleSelectionScreen = ({ navigation }) => {
         <View style={styles.cardsContainer}>
           {/* Customer */}
           <TouchableOpacity 
-            onPress={() => navigation.navigate('RegisterCustomer')}
+            onPress={() => navigation.navigate('RegisterCustomer', { role: 'client' })}
             activeOpacity={0.9}
             style={styles.card}
           >
@@ -40,7 +40,7 @@ const RoleSelectionScreen = ({ navigation }) => {
 
           {/* Technician */}
           <TouchableOpacity 
-            onPress={() => navigation.navigate('RegisterTechnician')}
+            onPress={() => navigation.navigate('RegisterTechnician', { role: 'technician' })}
             activeOpacity={0.9}
             style={[styles.card, styles.cardTechnician]}
           >

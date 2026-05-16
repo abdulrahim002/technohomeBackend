@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Home, Search, User, ClipboardList, Plus, Bell, LayoutGrid } from 'lucide-react-native';
+import { Home, Search, User, ClipboardList, Plus, Bell, LayoutGrid, MessageSquare } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../../screens/main/HomeScreen';
@@ -12,11 +12,13 @@ import TechnicianListScreen from '../../screens/main/TechnicianListScreen';
 import BookingDetailsScreen from '../../screens/main/BookingDetailsScreen';
 import ManualDiagnosisScreen from '../../screens/main/ManualDiagnosisScreen';
 import ProfileScreen from '../../screens/main/profile/ProfileScreen';
-import BookingsScreen from '../../screens/main/bookings/BookingsScreen';
+import BookingsScreen from '../../screens/main/BookingsScreen';
 import ChatScreen from '../../screens/main/ChatScreen';
+import ConversationsScreen from '../../screens/main/ConversationsScreen';
 import FinalBookingScreen from '../../screens/main/FinalBookingScreen';
 import EditProfileScreen from '../../screens/main/profile/EditProfileScreen';
 import SecurityScreen from '../../screens/main/profile/SecurityScreen';
+import TechnicianProfileScreen from '../../screens/main/TechnicianProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -47,7 +49,6 @@ const AICenterButton = ({ children, onPress }) => {
 
 /**
  * Customer Tab Navigator
- * Minimalist structure — each tab points to its main screen.
  */
 const TabNavigator = () => (
   <Tab.Navigator
@@ -84,11 +85,11 @@ const TabNavigator = () => (
       }}
     />
     <Tab.Screen 
-      name="ManualTab" 
-      component={ManualDiagnosisScreen} 
+      name="ChatsTab" 
+      component={ConversationsScreen} 
       options={{
-        tabBarLabel: 'كود عطل',
-        tabBarIcon: ({ color, size }) => <Search size={size} color={color} />
+        tabBarLabel: 'المحادثات',
+        tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} />
       }}
     />
     <Tab.Screen 
@@ -104,7 +105,6 @@ const TabNavigator = () => (
 
 /**
  * Root Customer Navigator
- * Holds the TabNavigator + All screens that need to be accessible from any tab
  */
 export default function CustomerTabs() {
   return (
@@ -114,15 +114,17 @@ export default function CustomerTabs() {
         component={TabNavigator} 
         options={{ headerShown: false }} 
       />
-      {/* Shared Screens accessible from any Tab */}
       <Stack.Screen name="CreateRequest" component={CreateRequestScreen} options={{ title: 'تشخيص ذكي AI' }} />
       <Stack.Screen name="DiagnosisResult" component={DiagnosisResultScreen} options={{ title: 'النتائج' }} />
       <Stack.Screen name="TechnicianList" component={TechnicianListScreen} options={{ title: 'اختر الفني' }} />
+      <Stack.Screen name="TechnicianProfile" component={TechnicianProfileScreen} options={{ title: 'ملف الفني' }} />
       <Stack.Screen name="FinalBooking" component={FinalBookingScreen} options={{ title: 'تأكيد الموعد' }} />
       <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} options={{ title: 'تفاصيل الطلب' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Security" component={SecurityScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Conversations" component={ConversationsScreen} options={{ title: 'المحادثات' }} />
+      <Stack.Screen name="ManualDiagnosis" component={ManualDiagnosisScreen} options={{ title: 'البحث بأكواد الخطأ' }} />
     </Stack.Navigator>
   );
 }

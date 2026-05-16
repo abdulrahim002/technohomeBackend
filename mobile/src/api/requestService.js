@@ -133,3 +133,15 @@ export const submitReview = async (requestId, rating, comment) => {
     return { success: false, message: error.response?.data?.message || 'فشل إرسال التقييم' };
   }
 };
+
+/**
+ * إرسال رمز الـ OTP رقمياً للفني
+ */
+export const authorizeCompletion = async (requestId) => {
+  try {
+    const response = await api.post(`/service-requests/${requestId}/authorize-completion`);
+    return { success: true, message: response.data.message };
+  } catch (error) {
+    return { success: false, message: error.response?.data?.message || 'فشل إرسال الرمز رقمياً' };
+  }
+};

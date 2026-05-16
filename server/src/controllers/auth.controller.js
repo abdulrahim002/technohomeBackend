@@ -21,8 +21,9 @@ const generateToken = (id, role) =>
 
 exports.register = async (req, res, next) => {
   try {
-    let { firstName, lastName, phone, password, role, city, specialties, brands, yearsOfExperience } = req.body;
-    const profileImage = req.file ? `uploads/${req.file.filename}` : '';
+    let { firstName, lastName, phone, password, role, city, area, specialties, brands, yearsOfExperience } = req.body;
+    const profileImage = req.files?.profileImage ? `uploads/${req.files.profileImage[0].filename}` : '';
+    const certificateImages = req.files?.certificates ? req.files.certificates.map(f => `uploads/${f.filename}`) : [];
 
     // 1. معالجة البيانات القادمة كمصفوفات نصية (بسبب FormData في الموبايل)
     try {
@@ -54,6 +55,7 @@ exports.register = async (req, res, next) => {
       password,
       role: userRole,
       city,
+      area,
       profileImage
     });
 
@@ -79,6 +81,7 @@ exports.register = async (req, res, next) => {
         specialties: specialties || [],
         brands: brands || [], 
         yearsOfExperience: Number(yearsOfExperience) || 0,
+        certificates: certificateImages,
         isVerified: false
       });
     }

@@ -1,16 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
-import { Clock, ShieldCheck, LogOut } from 'lucide-react-native';
+import { Clock, ShieldCheck, LogOut, RefreshCw } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
   
 /**
  * شاشة الانتظار (Pending Approval Screen)
- * الدور: إعلام الفني بأن حسابه قيد المراجعة.
- * هذه الشاشة تظهر للفني بعد التسجيل مباشرة وتخبره بأن حسابه لم يتم تفعيله بعد.
- *  
  */ 
 const PendingApprovalScreen = () => {
-  const { signOut, user } = useAuth(); // Use useAuth for sign out
+  const { signOut, user, refreshProfile } = useAuth();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshProfile();
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -32,6 +36,15 @@ const PendingApprovalScreen = () => {
            <ShieldCheck size={18} color="#4F46E5" />
            <Text style={styles.badgeText}>عملية توثيق آمنة 100%</Text>
         </View>
+
+        <TouchableOpacity 
+          onPress={handleRefresh}
+          disabled={refreshing}
+          style={[styles.refreshBtn, refreshing && { opacity: 0.7 }]}
+        >
+          <RefreshCw size={20} color="#FFFFFF" style={refreshing ? { transform: [{ rotate: '45deg' }] } : {}} />
+          <Text style={styles.refreshText}>{refreshing ? 'جاري التحقق...' : 'تحديث الحالة'}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity 
           onPress={signOut}
@@ -56,7 +69,24 @@ const styles = StyleSheet.create({
   badge: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#EEF2FF', px: 16, py: 10, borderRadius: 20, marginBottom: 40, paddingHorizontal: 16, paddingVertical: 10 },
   badgeText: { fontSize: 13, fontWeight: '800', color: '#4F46E5', marginLeft: 8 },
   logoutBtn: { flexDirection: 'row-reverse', alignItems: 'center', px: 32, py: 18, borderRadius: 24, borderWidth: 1.5, borderColor: '#F1F5F9', paddingHorizontal: 32, paddingVertical: 18, backgroundColor: '#F8FAFC' },
-  logoutText: { fontSize: 16, fontWeight: '800', color: '#EF4444', marginLeft: 10 }
+  logoutText: { fontSize: 16, fontWeight: '800', color: '#EF4444', marginLeft: 10 },
+  
+  refreshBtn: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    backgroundColor: '#4F46E5', 
+    width: '100%',
+    py: 20, 
+    borderRadius: 24, 
+    marginBottom: 16, 
+    justifyContent: 'center',
+    paddingVertical: 20,
+    shadowColor: '#4F46E5',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5
+  },
+  refreshText: { fontSize: 18, fontWeight: '900', color: '#FFFFFF', marginLeft: 10 }
 });
 
 export default PendingApprovalScreen;

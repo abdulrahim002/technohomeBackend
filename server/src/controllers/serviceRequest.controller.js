@@ -22,13 +22,51 @@ exports.discoverTechnicians = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+exports.getTechnicianPublicProfile = async (req, res, next) => {
+  try {
+    const technicianService = require('../services/technicianService');
+    const profile = await technicianService.getTechnicianPublicProfile(req.params.techId);
+    res.status(200).json({ status: 'success', data: { profile } });
+  } catch (error) { next(error); }
+};
+
+/**
+ * جلب الفترات الزمنية المحجوزة لفني في تاريخ معين
+ */
+exports.getUnavailableSlots = async (req, res, next) => {
+  try {
+    const { techId } = req.params;
+    const { date } = req.query; // YYYY-MM-DD
+    
+    if (!date) {
+      return res.status(400).json({ status: 'fail', message: 'التاريخ مطلوب' });
+    }
+
+    const ServiceRequest = require('../models/ServiceRequest.model');
+    
+    // الفترات محجوزة إذا كان الطلب مقبولاً، أو في الطريق، أو وصل، أو جاري العمل عليه
+    const unavailableRequests = await ServiceRequest.find({
+      technician: techId,
+      scheduledDate: date,
+      status: { $in: ['accepted', 'on_the_way', 'arrived', 'in_progress'] }
+    });
+
+    const unavailableSlots = unavailableRequests.map(req => req.timeSlot).filter(Boolean);
+
+    res.status(200).json({ 
+      status: 'success', 
+      data: { unavailableSlots } 
+    });
+  } catch (error) { next(error); }
+};
+
 /**
  * إنشاء طلب صيانة جديد مع تشخيص ذكي وتعيين فني وموعد
  */
 exports.createServiceRequest = async (req, res, next) => {
   try {
     // معالجة الصور المرفوعة
-    let images = [];
+    let images = req.body.images || [];
     if (req.files && req.files.length > 0) {
       images = req.files.map(file => `uploads/requests/${file.filename}`);
     }
@@ -38,9 +76,9 @@ exports.createServiceRequest = async (req, res, next) => {
       ...req.body,
       images,
       // فك ترميز التشخيص المسبق من FormData إذا وُجد
-      preComputedDiagnosis: req.body.preComputedDiagnosis 
+      preComputedDiagnosis: (req.body.preComputedDiagnosis && typeof req.body.preComputedDiagnosis === 'string') 
         ? JSON.parse(req.body.preComputedDiagnosis) 
-        : null,
+        : req.body.preComputedDiagnosis || null,
     };
 
     const result = await orderCreationService.createRequest(requestData, req.userId);
@@ -105,7 +143,7 @@ exports.getServiceRequestById = async (req, res, next) => {
 exports.uploadImage = async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ status: 'fail', message: 'لم يتم رفع صورة' });
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`;
+    const imageUrl = `uploads/users/${req.file.filename}`;
     res.status(200).json({ status: 'success', data: { imageUrl } });
   } catch (error) { next(error); }
 };
@@ -137,6 +175,19 @@ exports.deleteRequest = async (req, res, next) => {
 };
 
 /**
+ * إرسال رمز الـ OTP رقمياً للفني (من قبل العميل)
+ */
+exports.authorizeCompletion = async (req, res, next) => {
+  try {
+    const result = await clientOrderService.authorizeCompletion(req.params.id, req.userId);
+    res.status(200).json({ status: 'success', message: result.message });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+    next(error);
+  }
+};
+
+/**
  * --- Technician Actions ---
  */
 
@@ -147,10 +198,27 @@ exports.getTechnicianActiveJobs = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+exports.getTechnicianJobHistory = async (req, res, next) => {
+    try {
+        const requests = await technicianOrderService.getTechnicianJobHistory(req.userId);
+        res.status(200).json({ status: 'success', data: { count: requests.length, requests } });
+    } catch (error) { next(error); }
+};
+
 exports.acceptJob = async (req, res, next) => {
     try {
         const result = await technicianOrderService.acceptRequest(req.params.id, req.userId);
         res.status(200).json({ status: 'success', message: 'تم قبول الطلب بنجاح', data: result });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
+        next(error);
+    }
+};
+
+exports.rejectJob = async (req, res, next) => {
+    try {
+        const result = await technicianOrderService.rejectRequest(req.params.id, req.userId);
+        res.status(200).json({ status: 'success', message: 'تم رفض الطلب بنجاح', data: result });
     } catch (error) {
         if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
         next(error);

@@ -4,7 +4,7 @@ import { createServiceRequest } from '../../api/requestService';
 import { Clock, ShieldCheck, Zap, ArrowRight, Tool, CheckCircle, HelpCircle, Activity } from 'lucide-react-native';
 
 export default function DiagnosisResultScreen({ route, navigation }) {
-  const { diagnosisData, timedOut, bookingData, isManual, requestId } = route.params;
+  const { diagnosisData, timedOut, bookingData, requestId } = route.params;
   const { aiDiagnosis } = diagnosisData || {};
   const [savingOnly, setSavingOnly] = useState(false);
 
@@ -44,7 +44,7 @@ export default function DiagnosisResultScreen({ route, navigation }) {
             <Text style={styles.reportBadgeText}>تقرير ذكي مباشر</Text>
           </View>
           <Text style={styles.headerTitle}>
-            {isManual ? '📋 فحص الجهاز' : '💡 نتيجة التشخيص'}
+            💡 نتيجة التشخيص
           </Text>
           <Text style={styles.headerSub}>تم تحليل العطل بناءً على البيانات المقدمة</Text>
         </View>

@@ -2,6 +2,7 @@ const Notification = require('../models/Notification.model');
 const User = require('../models/User.model');
 const { getIO } = require('./socketService');
 const fcmService = require('./fcmService');
+const expoService = require('./expoNotificationService');
 
 /**
  * دالة مساعدة لإنشاء وإرسال الإشعارات
@@ -24,15 +25,21 @@ exports.createNotification = async ({ recipientId, senderId, title, message, typ
       relatedId
     });
 
-    // إرسال إشعار الدفع الفوري (Push Notification) عبر FCM
-    const recipient = await User.findById(recipientId).select('fcmToken');
-    if (recipient && recipient.fcmToken) {
-      await fcmService.sendPushNotification(
-        recipient.fcmToken,
-        title,
-        message,
-        { type, relatedId: relatedId ? relatedId.toString() : '' }
-      );
+    // إرسال إشعار الدفع الفوري (Push Notification)
+    const recipient = await User.findById(recipientId).select('fcmToken expoPushToken');
+    
+    if (recipient) {
+      const payload = { type, relatedId: relatedId ? relatedId.toString() : '' };
+
+      // 1. الأولوية لـ Expo (لأننا نستخدم Expo Go حالياً)
+      if (recipient.expoPushToken) {
+        await expoService.sendPushNotification(recipient.expoPushToken, title, message, payload);
+      } 
+      
+      // 2. البديل FCM (للجوالات التي لا تستخدم Expo)
+      if (recipient.fcmToken) {
+        await fcmService.sendPushNotification(recipient.fcmToken, title, message, payload);
+      }
     }
 
     return notification;
@@ -104,14 +111,28 @@ exports.notifyNearbyTechnicians = async ({ coordinates, maxDistanceInMeters = 15
       await Notification.insertMany(notifications);
       console.log(`[notifyNearbyTechnicians] Sent ${notifications.length} notifications`);
 
-      // إرسال إشعارات دفع للفنيين القريبين
-      const tokens = nearbyTechnicians
-        .map(tech => tech.fcmToken)
-        .filter(token => token); // فقط الذين لديهم توكن
+      // إرسال إشعارات دفع للفنيين القريبين عبر Expo
+      const expoTokens = nearbyTechnicians
+        .map(tech => tech.expoPushToken)
+        .filter(token => token);
         
-      if (tokens.length > 0) {
+      if (expoTokens.length > 0) {
+        await expoService.sendMulticastNotification(
+          expoTokens,
+          title,
+          message,
+          { type: 'order', relatedId: relatedId ? relatedId.toString() : '' }
+        );
+      }
+
+      // البديل FCM
+      const fcmTokens = nearbyTechnicians
+        .map(tech => tech.fcmToken)
+        .filter(token => token);
+        
+      if (fcmTokens.length > 0) {
         await fcmService.sendMulticastNotification(
-          tokens,
+          fcmTokens,
           title,
           message,
           { type: 'order', relatedId: relatedId ? relatedId.toString() : '' }

@@ -5,10 +5,10 @@ import api from './api';
  * الدور: جلب سجل الرسائل وتحديث حالة القراءة.
  */
 
-// جلب سجل المحادثة لطلب معين
-export const getChatHistory = async (requestId, page = 1) => {
+// جلب سجل المحادثة لطلب معين أو غرفة دردشة
+export const getChatHistory = async (identifier, page = 1) => {
   try {
-    const response = await api.get(`/chat/history/${requestId}`, {
+    const response = await api.get(`/chat/history/${identifier}`, {
       params: { page, limit: 50 }
     });
     return { success: true, data: response.data.data.messages };
@@ -18,9 +18,9 @@ export const getChatHistory = async (requestId, page = 1) => {
 };
 
 // تحديد الرسائل كمقروءة
-export const markMessagesAsRead = async (requestId) => {
+export const markMessagesAsRead = async (identifier) => {
   try {
-    await api.patch(`/chat/read/${requestId}`);
+    await api.patch(`/chat/read/${identifier}`);
     return { success: true };
   } catch (error) {
     return { success: false };
