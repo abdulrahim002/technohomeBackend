@@ -33,9 +33,6 @@ router.get('/lookups/cities', async (req, res) => {
       areas: areas.filter(area => area.cityId.toString() === city._id.toString())
     }));
 
-    console.log(`📡 Sending ${citiesWithAreas.length} cities with areas populated`);
-    citiesWithAreas.forEach(c => console.log(`   - ${c.nameAr}: ${c.areas?.length || 0} areas`));
-
     res.status(200).json({ status: 'success', data: { cities: citiesWithAreas } });
   } catch (error) {
     console.error('❌ Lookup Cities Error:', error);
