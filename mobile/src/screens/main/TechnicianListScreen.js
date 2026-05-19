@@ -28,7 +28,7 @@ import {
 import axios from 'axios';
 
 import { Colors } from '../../constants/Colors';
-import { API_URL } from '../../config/constants';
+import { API_URL, UPLOADS_URL } from '../../config/constants';
 import { getCityNameAr } from '../../config/fixedData';
 import useAuthStore from '../../store/useAuthStore';
 import { useAuth } from '../../context/AuthContext';
@@ -102,7 +102,10 @@ const TechnicianListScreen = ({ navigation, route }) => {
       >
         <View style={styles.imageWrapper}>
           {item.profileImage ? (
-            <Image source={{ uri: item.profileImage }} style={styles.profileImg} />
+            <Image 
+              source={{ uri: item.profileImage.startsWith('http') ? item.profileImage : `${UPLOADS_URL}${item.profileImage}` }} 
+              style={styles.profileImg} 
+            />
           ) : (
             <User size={30} color="#CBD5E1" />
           )}

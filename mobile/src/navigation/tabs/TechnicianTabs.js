@@ -12,6 +12,8 @@ import WalletHistoryScreen from '../../screens/main/technician/WalletHistoryScre
 import ChatScreen from '../../screens/main/ChatScreen';
 import ProfileScreen from '../../screens/main/profile/ProfileScreen';
 import ConversationsScreen from '../../screens/main/ConversationsScreen';
+import EditProfileScreen from '../../screens/main/profile/EditProfileScreen';
+import SecurityScreen from '../../screens/main/profile/SecurityScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -90,7 +92,7 @@ const TabNavigator = () => (
 
 export default function TechnicianTabs() {
   return (
-    <Stack.Navigator screenOptions={{ headerTitleAlign: 'center' }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="TechMain" 
         component={TabNavigator} 
@@ -115,6 +117,16 @@ export default function TechnicianTabs() {
         name="Conversations" 
         component={ConversationsScreen} 
         options={{ title: 'المحادثات' }} 
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Security" 
+        component={SecurityScreen} 
+        options={{ headerShown: false }} 
       />
     </Stack.Navigator>
   );

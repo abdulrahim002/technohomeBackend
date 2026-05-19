@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   ClipboardList,
   AlertTriangle,
-  MapPin
+  MapPin,
+  ShieldAlert,
+  UserCheck
 } from 'lucide-react';
 
 const Sidebar = ({ onLogout }) => {
@@ -20,6 +22,8 @@ const Sidebar = ({ onLogout }) => {
     { name: 'سجل الطلبات', icon: <ClipboardList size={20} />, path: '/requests' },
     { name: 'البث الحي الآن', icon: <Activity size={20} />, path: '/live-feed', badge: 'LIVE' },
     { name: 'الفنيين', icon: <Users size={20} />, path: '/technicians' },
+    { name: 'العملاء', icon: <UserCheck size={20} />, path: '/customers' },
+    { name: 'البلاغات والشكاوى', icon: <ShieldAlert size={20} />, path: '/reports' },
     { name: 'أنواع الأجهزة', icon: <Package size={20} />, path: '/appliances' },
     { name: 'الماركات التجارية', icon: <Tag size={20} />, path: '/brands' },
     { name: 'أكواد الأعطال', icon: <AlertTriangle size={20} />, path: '/error-codes' },

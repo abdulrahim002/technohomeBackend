@@ -7,7 +7,9 @@ import {
   SafeAreaView, 
   StyleSheet, 
   StatusBar,
-  Alert
+  Alert,
+  Linking,
+  Image
 } from 'react-native';
 import { 
   User, 
@@ -15,7 +17,6 @@ import {
   LogOut, 
   ShieldCheck,
   CreditCard,
-  Bell,
   Zap,
   UserCheck,
   Lock,
@@ -23,9 +24,10 @@ import {
   HelpCircle
 } from 'lucide-react-native';
 import useAuthStore from '../../../store/useAuthStore';
+import { useAuth } from '../../../context/AuthContext';
 import ProfileMenuItem from '../../../components/profile/ProfileMenuItem';
 import ProfileStatCard from '../../../components/profile/ProfileStatCard';
-import { sendLocalTestNotification } from '../../../services/NotificationService';
+import { UPLOADS_URL } from '../../../config/constants';
 
 /**
  * شاشة الملف الشخصي المطورة (Profile Screen v2)
@@ -33,7 +35,8 @@ import { sendLocalTestNotification } from '../../../services/NotificationService
  * التصميم: Premium Clean UI مع تعليقات عربية.
  */
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
+  const { signOut } = useAuth();
 
   // تأكيد تسجيل الخروج
   const handleLogout = () => {
@@ -42,8 +45,36 @@ const ProfileScreen = ({ navigation }) => {
       'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟',
       [
         { text: 'إلغاء', style: 'cancel' },
-        { text: 'خروج', style: 'destructive', onPress: logout }
+        { text: 'خروج', style: 'destructive', onPress: signOut }
       ]
+    );
+  };
+
+  // تفعيل مركز المساعدة
+  const handleHelpCenter = () => {
+    Alert.alert(
+      'مركز المساعدة والدعم 🛠️📞',
+      'يسعدنا دائماً مساعدتك والإجابة على استفساراتك. يرجى اختيار طريقة التواصل المناسبة:',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { 
+          text: 'اتصال هاتفياً 📞', 
+          onPress: () => Linking.openURL('tel:+218944531009').catch(() => Alert.alert('خطأ', 'لا يمكن إجراء الاتصال من هذا الجهاز.'))
+        },
+        { 
+          text: 'تواصل عبر واتساب 💬', 
+          onPress: () => Linking.openURL('https://wa.me/0944531009').catch(() => Alert.alert('خطأ', 'تطبيق واتساب غير مثبت على هذا الجهاز.'))
+        }
+      ]
+    );
+  };
+
+  // تفعيل عن تكنو هوم
+  const handleAboutApp = () => {
+    Alert.alert(
+      'عن تكنو هوم 🏠✨',
+      'تكنو هوم هو المنصة الذكية الرائدة لحجز فنيي الصيانة المنزلية المعتمدين والموثوقين.\n\nهدفنا هو تسهيل حياتك اليومية من خلال توفير خدمات صيانة سريعة ومضمونة تحت إشراف نخبة من الفنيين وبدعم تقني متكامل.\n\nالإصدار: 1.0.0\nحقوق الطبع والنشر © 2026 تكنو هوم.',
+      [{ text: 'حسناً', style: 'default' }]
     );
   };
 
@@ -59,9 +90,16 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.userInfo}>
            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <User size={40} color="#4F46E5" />
-              </View>
+              {user?.profileImage ? (
+                <Image 
+                  source={{ uri: user.profileImage.startsWith('http') ? user.profileImage : `${UPLOADS_URL}${user.profileImage}` }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={styles.avatar}>
+                  <User size={40} color="#4F46E5" />
+                </View>
+              )}
               <View style={styles.verifiedBadge}>
                  <ShieldCheck size={14} color="white" />
               </View>
@@ -106,31 +144,18 @@ const ProfileScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('Security')} 
           color="#F59E0B"
         />
-        <ProfileMenuItem 
-          icon={Bell} 
-          label="الإشعارات" 
-          onPress={() => {}} 
-          color="#EF4444"
-        />
-        <ProfileMenuItem 
-          icon={Zap} 
-          label="تجربة الإشعارات (اختبار)" 
-          onPress={sendLocalTestNotification} 
-          color="#8B5CF6"
-        />
-
         {/* مجموعة الدعم والمعلومات */}
         <Text style={styles.sectionTitle}>الدعم والمساعدة</Text>
         <ProfileMenuItem 
           icon={HelpCircle} 
-          label="مركز المساعدة" 
-          onPress={() => {}} 
+          label="مركز المساعدة والدعم" 
+          onPress={handleHelpCenter} 
           color="#6366F1"
         />
         <ProfileMenuItem 
           icon={Info} 
           label="عن تكنو هوم" 
-          onPress={() => {}} 
+          onPress={handleAboutApp} 
           color="#64748B"
         />
 
@@ -176,6 +201,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', 
     alignItems: 'center', 
     justifyContent: 'center',
+    elevation: 10
+  },
+  avatarImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 32,
+    borderWidth: 3,
+    borderColor: 'white',
     elevation: 10
   },
   verifiedBadge: { 

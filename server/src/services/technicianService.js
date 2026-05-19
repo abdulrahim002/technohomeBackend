@@ -62,7 +62,7 @@ class TechnicianService {
         yearsOfExperience: profile.yearsOfExperience || 0,
         reliabilityScore: profile.reliabilityScore || 0,
         bio: profile.bio,
-        profileImage: profile.profileImage,
+        profileImage: profile.user.profileImage || null, // ✅ الصورة من User وليس TechnicianProfile
         isOnline: profile.isAvailable
       }));
 
@@ -106,7 +106,7 @@ class TechnicianService {
       fullName: `${profile.user.firstName} ${profile.user.lastName}`,
       phone: profile.user.phone,
       city: profile.user.city?.nameAr || profile.user.city,
-      profileImage: profile.profileImage,
+      profileImage: profile.user.profileImage || null, // ✅ الصورة من User وليس TechnicianProfile
       rating: profile.rating || 0,
       reviewCount: profile.reviewCount || 0,
       completedJobs,

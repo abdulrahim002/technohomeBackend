@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Send, ChevronRight, Image as ImageIcon, Camera, MoreVertical } from 'lucide-react-native';
+import { Send, ChevronRight, Image as ImageIcon, Camera, MoreVertical, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket, emitSocketEvent, onSocketEvent, offSocketEvent } from '../../services/SocketService';
 import * as chatService from '../../api/chatService';
@@ -35,6 +35,68 @@ const ChatScreen = ({ route, navigation }) => {
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
 
   const identifier = requestId || chatRoomId;
+
+  const handleReportChat = () => {
+    Alert.alert(
+      'تقديم بلاغ حول المحادثة ⚠️',
+      'الرجاء اختيار سبب البلاغ:',
+      [
+        {
+          text: 'سلوك غير لائق 🚫',
+          onPress: () => submitChatReport('behavior')
+        },
+        {
+          text: 'محاولة خارج التطبيق 💰',
+          onPress: () => submitChatReport('bypass_commission')
+        },
+        {
+          text: 'سبب آخر ✏️',
+          onPress: () => submitChatReport('other')
+        },
+        {
+          text: 'تراجع',
+          style: 'cancel'
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const submitChatReport = async (category) => {
+    Alert.alert(
+      'تأكيد الشكوى 📋',
+      'هل أنت متأكد من إرسال هذا البلاغ للإدارة؟ سيتم مراجعة المحادثة واتخاذ الإجراء المناسب.',
+      [
+        {
+          text: 'نعم، إرسال',
+          onPress: async () => {
+            try {
+              const res = await api.post('/reports/submit', {
+                reportedId: recipientId,
+                source: 'chat',
+                chatRoomId: identifier,
+                category,
+                description: 'بلاغ مباشر من المحادثة بخصوص السلوك أو الالتزام.'
+              });
+
+              if (res.data.status === 'success') {
+                Alert.alert('نجح البلاغ ✅', 'تم إرسال بلاغك بنجاح وجاري المراجعة من قبل الإدارة.');
+              } else {
+                Alert.alert('خطأ', 'فشل في إرسال البلاغ');
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert('خطأ', 'حدث خطأ غير متوقع أثناء إرسال البلاغ');
+            }
+          }
+        },
+        {
+          text: 'إلغاء',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
 
   // دالة لتقسيم الرسائل حسب التاريخ
   const groupMessages = (msgs) => {
@@ -302,6 +364,9 @@ const ChatScreen = ({ route, navigation }) => {
           <View style={styles.avatarPlaceholder}>
              <Text style={styles.avatarText}>{recipientName.charAt(0)}</Text>
           </View>
+          <TouchableOpacity onPress={handleReportChat} style={styles.reportBtn}>
+            <AlertCircle size={22} color="#EF4444" />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -387,6 +452,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8F0',
   },
   backBtn: { padding: 4 },
+  reportBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
   headerInfo: { flex: 1, marginRight: 12, alignItems: 'flex-end' },
   headerName: { fontSize: 18, fontWeight: '700', color: '#1E293B', textAlign: 'right' },
   headerStatus: { fontSize: 12, color: '#64748B', textAlign: 'right' },

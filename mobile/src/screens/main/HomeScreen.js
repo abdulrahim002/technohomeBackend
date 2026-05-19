@@ -9,7 +9,7 @@ import {
   Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, LogOut } from 'lucide-react-native';
+import { LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, LogOut } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useBookings } from '../../hooks/useBookings';
 
@@ -48,10 +48,6 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           <View style={styles.actionIcons}>
-            <TouchableOpacity style={styles.minimalBtn}>
-              <Bell size={22} color="#1E293B" />
-              <View style={styles.redDot} />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.minimalBtn} onPress={signOut}>
               <LogOut size={22} color="#d24018ff" />
             </TouchableOpacity>

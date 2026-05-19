@@ -4,13 +4,31 @@ const User = require('../../models/User.model');
 const GeminiService = require('../ai/gemini.service');
 const mongoose = require('mongoose');
 const notificationService = require('../notificationService');
+const schedulingValidator = require('./schedulingValidator');
 
 class OrderCreationService {
   /**
    * إنشاء طلب صيانة هجين (حفظ سريع + تشخيص ذكي بمهلة زمنية)
    */
   async createRequest(payload, userId) {
-    const { id, applianceType, brand, problemDescription, serviceAddress, images, technicianId, scheduledDate, timeSlot, diagnosisType } = payload;
+    const { id, applianceType, brand, problemDescription, serviceAddress, images, technicianId, timeSlot, diagnosisType } = payload;
+    let { scheduledDate } = payload;
+
+    // توحيد تنسيق التاريخ إلى YYYY-MM-DD بتوقيت ليبيا لتجنب تضارب التوقيت العالمي (UTC)
+    if (scheduledDate) {
+      try {
+        const parsedDate = new Date(scheduledDate);
+        if (!isNaN(parsedDate.getTime())) {
+          const formatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Tripoli',
+            year: 'numeric', month: '2-digit', day: '2-digit'
+          });
+          scheduledDate = formatter.format(parsedDate);
+        }
+      } catch (e) {
+        console.warn('Failed to normalize scheduledDate:', e.message);
+      }
+    }
 
     console.log('--- [SERVICE] STARTING UNIFIED HYBRID REQUEST ---');
 
@@ -84,43 +102,71 @@ class OrderCreationService {
       };
     }
 
-    // ✅ جدار حماية Backend: التحقق من صحة التاريخ والوقت قبل إنشاء الحجز
-    if (technicianId && scheduledDate && timeSlot) {
-      const BOOKING_LEAD_TIME_HOURS = 4; // مهلة التحضير الأدنى بالساعات
-
-      // استخدام Intl API للحصول على التاريخ والوقت الدقيق بتوقيت ليبيا
-      const getLibyaDateTime = () => {
-        const now = new Date();
-        const formatter = new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'Africa/Tripoli',
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', hour12: false
-        });
-        const parts = formatter.formatToParts(now);
-        const get = (type) => parts.find(p => p.type === type)?.value || '0';
-        const todayStr = `${get('year')}-${get('month')}-${get('day')}`;
-        const currentDecimalHour = parseInt(get('hour'), 10) + parseInt(get('minute'), 10) / 60;
-        return { todayStr, currentDecimalHour };
-      };
-
-      const { todayStr, currentDecimalHour } = getLibyaDateTime();
-
-      // جدار 1: منع الحجز في تواريخ ماضية
-      if (scheduledDate < todayStr) {
-        throw { status: 400, message: 'لا يمكن الحجز في تواريخ ماضية.' };
+    // ✅ جدار حماية Backend: التحقق من تعارض المواعيد والتضارب وصحة التاريخ والوقت
+    if (scheduledDate && timeSlot) {
+      // 1. التحقق من تعارض مواعيد العميل (إذا كان لديه حجز مؤكد ومقبول في نفس التوقيت)
+      const isCustomerBusy = await schedulingValidator.isCustomerBusy(userId, scheduledDate, timeSlot, id);
+      if (isCustomerBusy) {
+        throw { status: 400, message: 'لديك حجز مؤكد ونشط بالفعل في نفس هذا اليوم والتوقيت. يرجى اختيار موعد آخر.' };
       }
 
-      // جدار 2: للحجز في نفس اليوم، التحقق من هامش الأمان (4 ساعات)
-      if (scheduledDate === todayStr) {
-        const slotStartHour = parseInt(timeSlot.split('-')[0].split(':')[0], 10);
-        const hoursUntilSlot = slotStartHour - currentDecimalHour;
+      if (technicianId) {
+        const BOOKING_LEAD_TIME_HOURS = 4; // مهلة التحضير الأدنى بالساعات
 
-        if (hoursUntilSlot < BOOKING_LEAD_TIME_HOURS) {
-          const slotLabel = timeSlot.replace('-', ' - ');
-          throw {
-            status: 400,
-            message: `لا يمكن الحجز للفترة (${slotLabel}). يلزم ${BOOKING_LEAD_TIME_HOURS} ساعات على الأقل قبل بدء الفترة الزمنية.`
-          };
+        // استخدام Intl API للحصول على التاريخ والوقت الدقيق بتوقيت ليبيا
+        const getLibyaDateTime = () => {
+          const now = new Date();
+          const formatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Tripoli',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          });
+          const parts = formatter.formatToParts(now);
+          const get = (type) => parts.find(p => p.type === type)?.value || '0';
+          const todayStr = `${get('year')}-${get('month')}-${get('day')}`;
+          const currentDecimalHour = parseInt(get('hour'), 10) + parseInt(get('minute'), 10) / 60;
+          return { todayStr, currentDecimalHour };
+        };
+
+        const { todayStr, currentDecimalHour } = getLibyaDateTime();
+
+        // جدار 1: منع الحجز في تواريخ ماضية
+        if (scheduledDate < todayStr) {
+          throw { status: 400, message: 'لا يمكن الحجز في تواريخ ماضية.' };
+        }
+
+        // جدار 2: للحجز في نفس اليوم، التحقق من هامش الأمان (4 ساعات)
+        if (scheduledDate === todayStr) {
+          const slotStartHour = parseInt(timeSlot.split('-')[0].split(':')[0], 10);
+          const hoursUntilSlot = slotStartHour - currentDecimalHour;
+
+          if (hoursUntilSlot < BOOKING_LEAD_TIME_HOURS) {
+            const slotLabel = timeSlot.replace('-', ' - ');
+            throw {
+              status: 400,
+              message: `لا يمكن الحجز للفترة (${slotLabel}). يلزم ${BOOKING_LEAD_TIME_HOURS} ساعات على الأقل قبل بدء الفترة الزمنية.`
+            };
+          }
+        }
+
+        // 2. التحقق من انشغال الفني المختار بموعد نشط آخر
+        const isTechBusy = await schedulingValidator.isTechnicianBusy(technicianId, scheduledDate, timeSlot, id);
+        if (isTechBusy) {
+          throw { status: 400, message: 'عذراً، الفني ملتزم بموعد مقبول آخر في نفس هذه الفترة الزمنية. يرجى اختيار موعد أو فني آخر.' };
+        }
+
+        // 3. منع التكرار والسبام (إذا كان هناك طلب معلق بالفعل لنفس الفني في نفس اليوم)
+        if (!id) { // فقط عند إنشاء طلب جديد وليس عند التحديث
+          const hasSpam = await schedulingValidator.hasDuplicatePendingRequest(userId, technicianId, scheduledDate);
+          if (hasSpam) {
+            throw { status: 400, message: 'لقد أرسلت بالفعل طلباً معلقاً لهذا الفني في هذا اليوم. يرجى انتظار رده على طلبك الحالي.' };
+          }
+
+          // 4. منع تكرار الحجز المؤكد لنفس الفني ونفس العميل في نفس اليوم (بعد القبول)
+          const hasActiveSameDay = await schedulingValidator.hasActiveBookingOnSameDay(userId, technicianId, scheduledDate);
+          if (hasActiveSameDay) {
+            throw { status: 400, message: 'لديك بالفعل حجز مؤكد ونشط مع هذا الفني في هذا اليوم. يمكنك التواصل معه مباشرة للتنسيق.' };
+          }
         }
       }
     }

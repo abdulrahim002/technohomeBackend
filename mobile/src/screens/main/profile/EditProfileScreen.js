@@ -13,14 +13,17 @@ import { ChevronRight, Save, User, Phone, MapPin } from 'lucide-react-native';
 import { getCities } from '../../../api/lookupService';
 import { updateProfile } from '../../../api/authService';
 import useAuthStore from '../../../store/useAuthStore';
+import { useAuth } from '../../../context/AuthContext';
 
 /**
  * شاشة تعديل الملف الشخصي (Edit Profile Screen)
- * الدور: السماح للمستخدم بتحديث بياناته (الاسم، الهاتف، المدينة).
+ * الدور: السماح للمستخدم بتحديث بياناته (الاسم، الهاتف، المدينة، المنطقة).
  */
 export default function EditProfileScreen({ navigation }) {
   const { user, updateUser } = useAuthStore();
+  const { refreshProfile } = useAuth();
   const [cities, setCities] = useState([]);
+  const [selectedAreas, setSelectedAreas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   
@@ -28,15 +31,25 @@ export default function EditProfileScreen({ navigation }) {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     phone: user?.phone || '',
-    city: user?.city?._id || user?.city || ''
+    city: user?.city?._id || user?.city || '',
+    area: user?.area?._id || user?.area || ''
   });
 
-  // جلب قائمة المدن المتاحة
+  // جلب قائمة المدن المتاحة والمناطق المرتبطة
   useEffect(() => {
     const fetchCities = async () => {
       try {
         const data = await getCities();
         setCities(data);
+        
+        // جلب وتحديد المناطق المتاحة للمدينة المحددة للمستخدم حالياً
+        const userCityId = user?.city?._id || user?.city;
+        if (userCityId) {
+          const matchedCity = data.find(c => c._id === userCityId);
+          if (matchedCity) {
+            setSelectedAreas(matchedCity.areas || []);
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -44,21 +57,28 @@ export default function EditProfileScreen({ navigation }) {
       }
     };
     fetchCities();
-  }, []);
+  }, [user]);
+
+  // عند اختيار مدينة جديدة
+  const handleCitySelect = (cityId) => {
+    const matchedCity = cities.find(c => c._id === cityId);
+    setFormData({ ...formData, city: cityId, area: '' });
+    setSelectedAreas(matchedCity?.areas || []);
+  };
 
   // تنفيذ عملية التحديث
   const handleSave = async () => {
-    if (!formData.firstName || !formData.phone || !formData.city) {
-      Alert.alert('تنبيه', 'يرجى ملء الحقول الأساسية واختيار المدينة');
+    if (!formData.firstName || !formData.phone || !formData.city || !formData.area) {
+      Alert.alert('تنبيه', 'يرجى ملء الحقول الأساسية واختيار المدينة والمنطقة');
       return;
     }
 
     setLoading(true);
     const result = await updateProfile(formData);
-    setLoading(true); // تأخير بسيط للإحساس بالتحديث
 
     if (result.success) {
       updateUser(result.user); // تحديث بيانات المستخدم في الـ Store العالمي
+      await refreshProfile(); // مزامنة وتصفية الجلسة الموحدة في AsyncStorage والـ Context
       Alert.alert('نجاح', 'تم تحديث بياناتك بنجاح');
       navigation.goBack();
     } else {
@@ -137,7 +157,7 @@ export default function EditProfileScreen({ navigation }) {
                   styles.cityChip, 
                   formData.city === city._id && styles.cityChipSelected
                 ]}
-                onPress={() => setFormData({...formData, city: city._id})}
+                onPress={() => handleCitySelect(city._id)}
               >
                 <Text style={[styles.cityText, formData.city === city._id && styles.cityTextSelected]}>
                   {city.nameAr}
@@ -146,6 +166,29 @@ export default function EditProfileScreen({ navigation }) {
             ))}
           </View>
         </View>
+
+        {/* اختيار المنطقة */}
+        {selectedAreas.length > 0 && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>المنطقة / الحي</Text>
+            <View style={styles.cityGrid}>
+              {selectedAreas.map((area) => (
+                <TouchableOpacity 
+                  key={area._id} 
+                  style={[
+                    styles.cityChip, 
+                    formData.area === area._id && styles.cityChipSelected
+                  ]}
+                  onPress={() => setFormData({...formData, area: area._id})}
+                >
+                  <Text style={[styles.cityText, formData.area === area._id && styles.cityTextSelected]}>
+                    {area.nameAr}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity 
           style={[styles.saveBtn, loading && styles.disabledBtn]} 

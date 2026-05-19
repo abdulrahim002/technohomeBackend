@@ -3,10 +3,13 @@ const router = express.Router();
 const reportController = require('../controllers/report.controller');
 const { verifyToken, isAuthenticated, isTechnician, isAdmin } = require('../middlewares/auth.middleware');
 
-// الفني يرسل بلاغ
-router.post('/submit', verifyToken, isAuthenticated, isTechnician, reportController.submitReport);
+// الفني أو العميل يرسل بلاغ
+router.post('/submit', verifyToken, isAuthenticated, reportController.submitReport);
 
 // الأدمن يعالج البلاغ
 router.patch('/:id/resolve', verifyToken, isAuthenticated, isAdmin, reportController.resolveReport);
+
+// الأدمن يستعرض كافة البلاغات
+router.get('/', verifyToken, isAuthenticated, isAdmin, reportController.getReports);
 
 module.exports = router;

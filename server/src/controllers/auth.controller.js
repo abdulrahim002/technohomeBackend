@@ -104,8 +104,8 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ status: 'fail', message: 'يرجى إدخال الهاتف وكلمة المرور' });
     }
 
-    // جلب المستخدم مع المدينة
-    const user = await User.findOne({ phone }).select('+password').populate('city', 'nameAr');
+    // جلب المستخدم مع المدينة والمنطقة
+    const user = await User.findOne({ phone }).select('+password').populate('city', 'nameAr').populate('area', 'nameAr');
     
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ status: 'fail', message: 'بيانات الدخول غير صحيحة' });
@@ -139,7 +139,7 @@ exports.login = async (req, res, next) => {
 
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.userId).populate('city', 'nameAr');
+    const user = await User.findById(req.userId).populate('city', 'nameAr').populate('area', 'nameAr');
     
     let techProfile = null;
     if (user.role === 'technician') {
@@ -191,7 +191,7 @@ exports.changePassword = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { firstName, lastName, phone, city } = req.body;
+    const { firstName, lastName, phone, city, area } = req.body;
     
     // منع تغيير الحقول الحساسة
     const updateData = {};
@@ -199,12 +199,13 @@ exports.updateProfile = async (req, res, next) => {
     if (lastName) updateData.lastName = lastName;
     if (phone) updateData.phone = phone;
     if (city) updateData.city = city;
+    if (area) updateData.area = area;
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       { $set: updateData },
       { new: true, runValidators: true }
-    ).populate('city', 'nameAr');
+    ).populate('city', 'nameAr').populate('area', 'nameAr');
 
     if (!user) return res.status(404).json({ status: 'fail', message: 'المستخدم غير موجود' });
 

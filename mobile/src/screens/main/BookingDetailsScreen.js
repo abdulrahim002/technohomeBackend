@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Dimensions
+  Dimensions,
+  Alert
 } from 'react-native';
 import { 
   ChevronRight, 
@@ -34,6 +35,7 @@ import { DiagnosisCard } from '../../components/main/DiagnosisCard';
 import JobStepper from '../../components/main/JobStepper';
 import RatingModal from '../../components/main/RatingModal';
 import { UPLOADS_URL } from '../../config/constants';
+import api from '../../api/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -69,6 +71,72 @@ export default function BookingDetailsScreen() {
     }
   };
 
+  const handleReportTechnician = () => {
+    Alert.alert(
+      'تقديم شكوى ضد الفني ⚠️',
+      'الرجاء اختيار سبب المشكلة:',
+      [
+        {
+          text: 'لم يحضر الفني (تأخر) ⏰',
+          onPress: () => submitTechnicianReport('no_show')
+        },
+        {
+          text: 'سلوك غير لائق 🚫',
+          onPress: () => submitTechnicianReport('behavior')
+        },
+        {
+          text: 'محاولة التفاف على العمولة 💰',
+          onPress: () => submitTechnicianReport('bypass_commission')
+        },
+        {
+          text: 'سبب آخر ✏️',
+          onPress: () => submitTechnicianReport('other')
+        },
+        {
+          text: 'تراجع',
+          style: 'cancel'
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const submitTechnicianReport = async (category) => {
+    Alert.alert(
+      'تأكيد البلاغ 📋',
+      'هل تود رفع بلاغ للإدارة بخصوص الفني؟ سيتم مراجعة الطلب وجدية البلاغ فوراً لاتخاذ الإجراء اللازم.',
+      [
+        {
+          text: 'نعم، إرسال البلاغ',
+          onPress: async () => {
+            try {
+              const res = await api.post('/reports/submit', {
+                reportedId: request.technician?._id,
+                source: 'booking',
+                serviceRequestId: request._id,
+                category,
+                description: 'بلاغ من العميل بخصوص التزام أو سلوك الفني خلال طلب الصيانة.'
+              });
+
+              if (res.data.status === 'success') {
+                Alert.alert('تم الإرسال ✅', 'تم تسجيل بلاغك بنجاح، وسيتواصل معك الدعم الفني أو الأدمن عند الضرورة.');
+              } else {
+                Alert.alert('خطأ', 'فشل في إرسال البلاغ');
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert('خطأ', 'حدث خطأ أثناء معالجة وإرسال البلاغ');
+            }
+          }
+        },
+        {
+          text: 'إلغاء',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   if (loading || !request) return (
     <View style={styles.center}>
       <ActivityIndicator size="large" color="#4F46E5" />
@@ -90,27 +158,7 @@ export default function BookingDetailsScreen() {
            <ChevronRight size={24} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>تفاصيل طلبي</Text>
-        <View style={styles.headerActions}>
-           {request.status !== 'completed' && !isDiagnosedOnly && (
-             <TouchableOpacity 
-               style={[styles.backBtn, { marginRight: 10 }]} 
-               onPress={() => navigation.navigate('Chat', { 
-                 requestId: request._id, 
-                 recipientId: request.technician?._id, 
-                 recipientName: `${request.technician?.firstName || 'فني'} ${request.technician?.lastName || ''}` 
-               })}
-             >
-                <MessageSquare size={20} color="#4F46E5" />
-             </TouchableOpacity>
-           )}
-           <TouchableOpacity 
-             style={styles.backBtn} 
-             onPress={deleteRequest}
-             disabled={actionLoading}
-           >
-              <Trash2 size={20} color="#EF4444" />
-           </TouchableOpacity>
-        </View>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
@@ -211,10 +259,16 @@ export default function BookingDetailsScreen() {
                      <Text style={styles.callBtnText}>اتصال هاتفياً</Text>
                   </TouchableOpacity>
                 )}
-                {canCancel && (
+                {canCancel ? (
                    <TouchableOpacity style={styles.cancelBtn} onPress={cancelBooking}>
                       <Text style={styles.cancelBtnText}>إلغاء حجز الفني</Text>
                    </TouchableOpacity>
+                ) : (
+                   !isCompleted && (
+                     <TouchableOpacity style={[styles.cancelBtn, { borderColor: '#FEE2E2' }]} onPress={handleReportTechnician}>
+                        <Text style={[styles.cancelBtnText, { color: '#EF4444' }]}>إبلاغ عن الفني ⚠️</Text>
+                     </TouchableOpacity>
+                   )
                 )}
              </View>
           </View>
@@ -322,7 +376,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
   backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
-  headerActions: { flexDirection: 'row' },
   scrollBody: { padding: 20, paddingBottom: 40 },
   
   // Completed Banner

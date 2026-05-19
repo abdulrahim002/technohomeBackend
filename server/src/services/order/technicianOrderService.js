@@ -4,6 +4,7 @@ const TechnicianProfile = require('../../models/TechnicianProfile.model');
 const OrderStateMachine = require('../orderStateMachine');
 const notificationService = require('../notificationService');
 const transactionService = require('../transactionService');
+const schedulingValidator = require('./schedulingValidator');
 
 class TechnicianOrderService {
   /**
@@ -110,26 +111,7 @@ class TechnicianOrderService {
     // الخطوة السحرية: Auto-Reject للمواعيد المتعارضة (Conflict Resolution)
     // -----------------------------------------------------
     if (request.scheduledDate && request.timeSlot) {
-      const conflictingRequests = await ServiceRequest.find({
-        _id: { $ne: request._id },
-        technician: techId,
-        scheduledDate: request.scheduledDate,
-        timeSlot: request.timeSlot,
-        status: 'pending'
-      });
-
-      for (const conflictReq of conflictingRequests) {
-        conflictReq.status = 'rejected'; // تم إضافة الحالة rejected مسبقاً
-        await conflictReq.save();
-
-        await notificationService.createNotification({
-          recipientId: conflictReq.customer,
-          title: 'تضارب في الموعد',
-          message: 'نعتذر منك، الفني غير متاح في الوقت المحدد. يمكنك تعديل موعد الطلب أو اختيار فني آخر متاح.',
-          type: 'conflict_rejected',
-          relatedId: conflictReq._id
-        });
-      }
+      await schedulingValidator.autoRejectConflictingRequests(request);
     }
 
     return request;

@@ -14,7 +14,6 @@ import {
   Briefcase, 
   TrendingUp, 
   Star, 
-  Bell,
   CheckCircle,
   Clock,
   ShieldCheck,
@@ -67,10 +66,7 @@ const TechnicianDashboard = () => {
           <Text style={styles.userNameText}>{user?.firstName}</Text>
         </View>
 
-        <TouchableOpacity style={styles.notificationBtn}>
-           <View style={styles.badge} />
-           <Bell size={22} color="#1E293B" />
-        </TouchableOpacity>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView 
@@ -186,8 +182,6 @@ const styles = StyleSheet.create({
   greetingText: { fontSize: 13, fontWeight: '700', color: '#94A3B8', marginBottom: 2 },
   userNameText: { fontSize: 22, fontWeight: '900', color: '#1E293B' },
   iconBtn: { width: 44, height: 44, backgroundColor: '#F8FAFC', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  notificationBtn: { width: 44, height: 44, backgroundColor: '#F8FAFC', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  badge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, backgroundColor: '#EF4444', borderRadius: 4, zIndex: 1, borderWidth: 1.5, borderColor: '#FFFFFF' },
   scrollContent: { paddingBottom: 40 },
   contentWrapper: { paddingHorizontal: 24 },
   statusBanner: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderRadius: 28, marginTop: 24, marginBottom: 24, borderWidth: 1, borderColor: '#F1F5F9' },

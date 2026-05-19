@@ -116,14 +116,6 @@ exports.chargeTechnicianWallet = async (req, res, next) => {
     const { techId, amount } = req.body;
     const transaction = await transactionService.chargeWallet(req.userId, techId, amount);
 
-    // إشعار الفني بشحن الرصيد
-    await notificationService.createNotification({
-      recipientId: techId,
-      title: 'تم شحن محفظتك 💰',
-      message: `تم إضافة ${amount} دينار إلى رصيدك. رصيدك الحالي هو ${transaction.newBalance} دينار.`,
-      type: 'system'
-    });
-
     res.status(200).json({ status: 'success', message: 'تم شحن المحفظة بنجاح', data: { transaction } });
   } catch (error) { next(error); }
 };

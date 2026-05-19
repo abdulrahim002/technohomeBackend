@@ -15,10 +15,13 @@ import {
   Star,
   Wallet,
   TrendingUp,
-  Download
+  Download,
+  Activity
 } from 'lucide-react';
 import useAxios from '../hooks/useAxios';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Technicians = () => {
   const api = useAxios();
@@ -27,10 +30,39 @@ const Technicians = () => {
   const [selectedTech, setSelectedTech] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('pending'); // 'pending', 'verified', 'rejected'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [counts, setCounts] = useState({ pending: 0, verified: 0 });
 
   useEffect(() => {
     fetchTechnicians();
   }, [filter]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, []);
+
+  const fetchCounts = async () => {
+    try {
+      const [pendingRes, verifiedRes] = await Promise.all([
+        api.get('/admin/technicians/pending'),
+        api.get('/admin/technicians/verified')
+      ]);
+      setCounts({
+        pending: pendingRes.data.data.count || 0,
+        verified: verifiedRes.data.data.count || 0
+      });
+    } catch (error) {
+      console.error('Error fetching counts:', error);
+    }
+  };
+
+  // تصفية الفنيين بناءً على اسم الفني أو رقم الهاتف
+  const filteredTechnicians = technicians.filter(tech => {
+    const fullName = `${tech.firstName || ''} ${tech.lastName || ''}`.toLowerCase();
+    const phone = (tech.phone || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return fullName.includes(query) || phone.includes(query);
+  });
 
   const fetchTechnicians = async () => {
     setLoading(true);
@@ -71,6 +103,7 @@ const Technicians = () => {
       alert('تم قبول الفني وتفعيل حسابه بنجاح ✅');
       setShowModal(false);
       fetchTechnicians();
+      fetchCounts();
     } catch (error) {
       alert('خطأ في عملية الاعتماد');
     }
@@ -84,6 +117,7 @@ const Technicians = () => {
       alert('تم رفض الطلب وإبلاغ الفني');
       setShowModal(false);
       fetchTechnicians();
+      fetchCounts();
     } catch (error) {
       alert('خطأ في عملية الرفض');
     }
@@ -103,7 +137,7 @@ const Technicians = () => {
   };
 
   const handleExportWallet = (userId) => {
-    window.open(`${import.meta.env.VITE_API_URL}/admin/export/wallet/${userId}`, '_blank');
+    window.open(`${API_URL}/admin/export/wallet/${userId}`, '_blank');
   };
 
   return (
@@ -130,6 +164,59 @@ const Technicians = () => {
         </div>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-card p-6 flex items-center justify-between shadow-xl shadow-black/5 bg-white border border-slate-100 rounded-3xl">
+          <div>
+            <p className="text-slate-400 font-bold text-[10px] mb-1 uppercase tracking-widest font-outfit text-right">إجمالي الفنيين</p>
+            <h3 className="text-3xl font-black text-slate-900 text-right">{counts.verified + counts.pending}</h3>
+          </div>
+          <div className="p-4 rounded-2xl bg-indigo-500 bg-opacity-10 border border-indigo-500/10">
+            <Users className="text-indigo-600" size={24} />
+          </div>
+        </div>
+        <div className="glass-card p-6 flex items-center justify-between shadow-xl shadow-black/5 bg-white border border-slate-100 rounded-3xl">
+          <div>
+            <p className="text-slate-400 font-bold text-[10px] mb-1 uppercase tracking-widest font-outfit text-right">فنيين معتمدين</p>
+            <h3 className="text-3xl font-black text-slate-900 text-right">{counts.verified}</h3>
+          </div>
+          <div className="p-4 rounded-2xl bg-emerald-500 bg-opacity-10 border border-emerald-500/10">
+            <ShieldCheck className="text-emerald-600" size={24} />
+          </div>
+        </div>
+        <div className="glass-card p-6 flex items-center justify-between shadow-xl shadow-black/5 bg-white border border-slate-100 rounded-3xl">
+          <div>
+            <p className="text-slate-400 font-bold text-[10px] mb-1 uppercase tracking-widest font-outfit text-right">طلبات معلقة</p>
+            <h3 className="text-3xl font-black text-slate-900 text-amber-500 text-right">{counts.pending}</h3>
+          </div>
+          <div className="p-4 rounded-2xl bg-amber-500 bg-opacity-10 border border-amber-500/10">
+            <Activity className="text-amber-600" size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Search Input Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-end">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+          <input 
+            type="text" 
+            placeholder="ابحث باسم الفني أو رقم الهاتف..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-2xl py-3 pr-12 pl-6 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-outfit text-right"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Table Section */}
       <div className="glass rounded-[32px] overflow-hidden border border-white/5">
          <div className="overflow-x-auto">
@@ -150,7 +237,7 @@ const Technicians = () => {
                          <td colSpan="5" className="px-8 py-8"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
                       </tr>
                     ))
-                  ) : technicians.map((tech) => (
+                  ) : filteredTechnicians.map((tech) => (
                     <tr key={tech._id} className="hover:bg-white/[0.01] transition-all group">
                        <td className="px-8 py-6 text-slate-400 text-xs font-bold font-outfit">
                           {new Date(tech.createdAt).toLocaleDateString('ar-EG')}
@@ -185,7 +272,7 @@ const Technicians = () => {
                              </div>
                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-all overflow-hidden">
                                 {tech.profileImage ? (
-                                   <img src={`${import.meta.env.VITE_API_URL}/${tech.profileImage}`} alt="" className="w-full h-full object-cover" />
+                                   <img src={`${API_URL}/${tech.profileImage}`} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                    <Users size={20} className="text-slate-600" />
                                 )}
@@ -197,10 +284,12 @@ const Technicians = () => {
                </tbody>
             </table>
          </div>
-         {!loading && technicians.length === 0 && (
+         {!loading && filteredTechnicians.length === 0 && (
             <div className="py-24 text-center">
                <ShieldCheck className="mx-auto text-slate-800 mb-4" size={48} />
-               <p className="text-slate-500 font-bold">لا توجد سجلات في هذا القسم حالياً</p>
+               <p className="text-slate-500 font-bold">
+                 {searchQuery ? 'لا توجد نتائج تطابق بحثك حالياً' : 'لا توجد سجلات في هذا القسم حالياً'}
+               </p>
             </div>
          )}
       </div>
@@ -261,12 +350,12 @@ const Technicians = () => {
                                 {selectedTech.certificates.map((cert, idx) => (
                                   <a 
                                     key={idx} 
-                                    href={`${import.meta.env.VITE_API_URL}/${cert}`} 
+                                    href={`${API_URL}/${cert}`} 
                                     target="_blank" 
                                     rel="noreferrer"
                                     className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 hover:border-indigo-500 transition-all group"
                                   >
-                                     <img src={`${import.meta.env.VITE_API_URL}/${cert}`} alt="" className="w-full h-full object-cover" />
+                                     <img src={`${API_URL}/${cert}`} alt="" className="w-full h-full object-cover" />
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                                         <Eye size={20} className="text-white" />
                                      </div>
@@ -308,7 +397,7 @@ const Technicians = () => {
                       <div className="glass-card p-8 flex flex-col items-center text-center">
                          <div className="w-24 h-24 bg-white rounded-[32px] border-2 border-white/5 mb-6 flex items-center justify-center overflow-hidden">
                             {selectedTech.profileImage ? (
-                               <img src={`${import.meta.env.VITE_API_URL}/${selectedTech.profileImage}`} alt="" className="w-full h-full object-cover" />
+                               <img src={`${API_URL}/${selectedTech.profileImage}`} alt="" className="w-full h-full object-cover" />
                             ) : (
                                <Users size={40} className="text-slate-700" />
                             )}

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Home, Search, User, ClipboardList, Plus, Bell, LayoutGrid, MessageSquare } from 'lucide-react-native';
+import { Search, User, ClipboardList, Plus, LayoutGrid, MessageSquare } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../../screens/main/HomeScreen';
@@ -22,14 +22,6 @@ import TechnicianProfileScreen from '../../screens/main/TechnicianProfileScreen'
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-// Header Notification Icon Component
-const HeaderRight = () => (
-  <TouchableOpacity style={styles.headerIcon} onPress={() => {}}>
-    <View style={styles.badge} />
-    <Bell size={22} color="#1E293B" />
-  </TouchableOpacity>
-);
 
 // Custom Center Action Button (+)
 const AICenterButton = ({ children, onPress }) => {
@@ -108,7 +100,7 @@ const TabNavigator = () => (
  */
 export default function CustomerTabs() {
   return (
-    <Stack.Navigator screenOptions={{ headerTitleAlign: 'center' }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="CustomerMain" 
         component={TabNavigator} 
@@ -170,24 +162,6 @@ const styles = StyleSheet.create({
     shadowOffset: { height: 6 },
     elevation: 10,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-  },
-  headerIcon: {
-    marginRight: 15,
-    padding: 8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-  },
-  badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    backgroundColor: '#EF4444',
-    borderRadius: 4,
-    zIndex: 1,
-    borderWidth: 1.5,
     borderColor: '#FFFFFF',
   }
 });

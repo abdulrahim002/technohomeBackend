@@ -11,6 +11,8 @@ import ServiceRequests from './pages/ServiceRequests';
 import ErrorCodes from './pages/ErrorCodes';
 import Cities from './pages/Cities';
 import LoginPage from './pages/LoginPage';
+import Reports from './pages/Reports';
+import Customers from './pages/Customers';
 
 function App() {
   const [admin, setAdmin] = useState(null);
@@ -54,8 +56,10 @@ function App() {
               <Route path="/appliances" element={<Appliances />} />
               <Route path="/brands" element={<Brands />} />
               <Route path="/technicians" element={<Technicians />} />
+              <Route path="/customers" element={<Customers />} />
               <Route path="/error-codes" element={<ErrorCodes />} />
               <Route path="/cities" element={<Cities />} />
+              <Route path="/reports" element={<Reports />} />
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

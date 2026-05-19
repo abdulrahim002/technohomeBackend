@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
   const refreshProfile = useCallback(async () => {
     try {
       const response = await api.get('/auth/me');
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const { user: freshUser, techProfile } = response.data.data;
         const storedToken = await AsyncStorage.getItem('userToken');
         
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
           // 2. Fetch fresh data from server
           try {
             const response = await api.get('/auth/me');
-            if (response.data.success) {
+            if (response.data.status === 'success') {
               const { user: freshUser, techProfile } = response.data.data;
               const userData = {
                 ...freshUser,

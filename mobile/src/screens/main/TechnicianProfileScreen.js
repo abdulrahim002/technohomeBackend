@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  SafeAreaView, StatusBar, ActivityIndicator, Image, Modal, TextInput, Alert
+  SafeAreaView, StatusBar, ActivityIndicator, Image, Modal, TextInput, Alert,
+  KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform
 } from 'react-native';
 import { 
   ChevronRight, Star, ShieldCheck, MapPin, Wrench, 
@@ -231,63 +232,77 @@ export default function TechnicianProfileScreen() {
 
       {/* Modal لجمع بيانات الجهاز في حال الحجز المباشر */}
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity style={styles.closeModal} onPress={() => setModalVisible(false)}>
-              <X size={24} color="#1E293B" />
-            </TouchableOpacity>
-            
-            <Text style={styles.modalTitle}>تفاصيل المشكلة</Text>
-            <Text style={styles.modalSub}>الرجاء تحديد تفاصيل الجهاز للمتابعة</Text>
-
-            <Text style={styles.inputLabel}>نوع الجهاز</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-              {appliancesList.map(app => (
-                <TouchableOpacity 
-                  key={app._id}
-                  style={[styles.pill, formConfig.applianceType === app._id && styles.pillActive]}
-                  onPress={() => setFormConfig({...formConfig, applianceType: app._id})}
-                >
-                  <Text style={[styles.pillText, formConfig.applianceType === app._id && styles.pillTextActive]}>
-                    {app.nameAr}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.inputLabel}>الماركة</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-              {brandsList.filter(b => b.applianceType === formConfig.applianceType || b.applianceType?._id === formConfig.applianceType || !b.applianceType).map(b => (
-                <TouchableOpacity 
-                  key={b._id}
-                  style={[styles.pill, formConfig.brand === (b.nameAr || b.nameEn) && styles.pillActive]}
-                  onPress={() => setFormConfig({...formConfig, brand: b.nameAr || b.nameEn})}
-                >
-                  <Text style={[styles.pillText, formConfig.brand === (b.nameAr || b.nameEn) && styles.pillTextActive]}>
-                    {b.nameAr || b.nameEn}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.inputLabel}>وصف سريع للمشكلة</Text>
-            <TextInput 
-              style={styles.textArea}
-              placeholder="مثال: المكيف لا يبرد ويصدر صوتاً"
-              value={formConfig.problemDescription}
-              onChangeText={text => setFormConfig({...formConfig, problemDescription: text})}
-              multiline
-            />
-
-            <TouchableOpacity 
-              style={[styles.bookBtn, { marginTop: 20 }, (!formConfig.applianceType || !formConfig.brand || formConfig.problemDescription.length < 5) && { backgroundColor: '#CBD5E1' }]}
-              onPress={proceedToBooking}
-              disabled={!formConfig.applianceType || !formConfig.brand || formConfig.problemDescription.length < 5}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalBg}>
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={{ width: '100%' }}
             >
-              <Text style={styles.bookBtnText}>متابعة التأكيد</Text>
-            </TouchableOpacity>
+              <View style={styles.modalContent}>
+                <TouchableOpacity style={styles.closeModal} onPress={() => setModalVisible(false)}>
+                  <X size={24} color="#1E293B" />
+                </TouchableOpacity>
+                
+                <Text style={styles.modalTitle}>تفاصيل المشكلة</Text>
+                <Text style={styles.modalSub}>الرجاء تحديد تفاصيل الجهاز للمتابعة</Text>
+
+                <ScrollView 
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ maxHeight: 380 }}
+                  contentContainerStyle={{ paddingBottom: 10 }}
+                >
+                  <Text style={styles.inputLabel}>نوع الجهاز</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+                    {appliancesList.map(app => (
+                      <TouchableOpacity 
+                        key={app._id}
+                        style={[styles.pill, formConfig.applianceType === app._id && styles.pillActive]}
+                        onPress={() => setFormConfig({...formConfig, applianceType: app._id})}
+                      >
+                        <Text style={[styles.pillText, formConfig.applianceType === app._id && styles.pillTextActive]}>
+                          {app.nameAr}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <Text style={styles.inputLabel}>الماركة</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+                    {brandsList.filter(b => b.applianceType === formConfig.applianceType || b.applianceType?._id === formConfig.applianceType || !b.applianceType).map(b => (
+                      <TouchableOpacity 
+                        key={b._id}
+                        style={[styles.pill, formConfig.brand === (b.nameAr || b.nameEn) && styles.pillActive]}
+                        onPress={() => setFormConfig({...formConfig, brand: b.nameAr || b.nameEn})}
+                      >
+                        <Text style={[styles.pillText, formConfig.brand === (b.nameAr || b.nameEn) && styles.pillTextActive]}>
+                          {b.nameAr || b.nameEn}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <Text style={styles.inputLabel}>وصف سريع للمشكلة</Text>
+                  <TextInput 
+                    style={styles.textArea}
+                    placeholder="مثال: المكيف لا يبرد ويصدر صوتاً"
+                    value={formConfig.problemDescription}
+                    onChangeText={text => setFormConfig({...formConfig, problemDescription: text})}
+                    multiline
+                  />
+
+                  <TouchableOpacity 
+                    style={[styles.bookBtn, { marginTop: 20 }, (!formConfig.applianceType || !formConfig.brand || formConfig.problemDescription.length < 5) && { backgroundColor: '#CBD5E1' }]}
+                    onPress={proceedToBooking}
+                    disabled={!formConfig.applianceType || !formConfig.brand || formConfig.problemDescription.length < 5}
+                  >
+                    <Text style={styles.bookBtnText}>متابعة التأكيد</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

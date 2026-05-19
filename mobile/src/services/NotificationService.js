@@ -53,7 +53,7 @@ export async function registerForPushNotificationsAsync() {
       token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
       console.log(' [DEBUG] Expo Push Token:', token);
     } catch (e) {
-      console.error(' [ERROR] Error getting push token:', e);
+      console.log(' [ERROR] Error getting push token (Handled):', e.message);
     }
   } else {
     console.log(' [DEBUG] Must use physical device for Push Notifications');
@@ -85,6 +85,6 @@ export async function savePushTokenToServer(token) {
     await api.patch('/users/expo-push-token', { token });
     console.log(' [DEBUG] Push Token saved to server');
   } catch (error) {
-    console.error(' [ERROR] Failed to save push token to server:', error.response?.data || error.message);
+    console.log(' [ERROR] Failed to save push token to server (Handled):', error.response?.data || error.message);
   }
 }

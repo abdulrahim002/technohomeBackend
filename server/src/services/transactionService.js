@@ -51,8 +51,8 @@ class TransactionService {
 
     await notificationService.createNotification({
       recipientId: techId,
-      title: 'تم شحن المحفظة',
-      message: `تم إضافة ${amount} دينار إلى محفظتك بنجاح. رصيدك الحالي: ${user.walletBalance} دينار.`,
+      title: 'تم شحن محفظتك 💰',
+      message: `تم شحن محفظتك بمبلغ ${amount} دينار بنجاح. رصيدك الحالي هو ${user.walletBalance} دينار.`,
       type: 'system'
     });
 
