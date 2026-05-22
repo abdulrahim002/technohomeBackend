@@ -55,8 +55,7 @@ export default function RegisterScreen({ navigation, route }) {
     phone: '',
     password: '',
     city: '',
-    area: '',
-    experienceYears: ''
+    area: ''
   });
 
   useEffect(() => {
@@ -103,7 +102,7 @@ export default function RegisterScreen({ navigation, route }) {
 
   const handleRegister = async () => {
     const isBaseValid = formData.firstName && formData.phone && formData.city && formData.area && formData.password;
-    const isTechValid = isTech ? (selectedSpecs.length > 0 && formData.experienceYears) : true;
+    const isTechValid = isTech ? (selectedSpecs.length > 0) : true;
 
     if (!isBaseValid || !isTechValid) {
       Alert.alert("تنبيه", "يرجى إكمال كافة البيانات المطلوبة.");
@@ -123,7 +122,6 @@ export default function RegisterScreen({ navigation, route }) {
         submissionData.append('password', formData.password);
         submissionData.append('city', formData.city);
         submissionData.append('area', formData.area);
-        submissionData.append('yearsOfExperience', formData.experienceYears);
         submissionData.append('specialties', JSON.stringify(selectedSpecs));
         submissionData.append('brands', JSON.stringify(selectedBrands));
 
@@ -252,20 +250,7 @@ export default function RegisterScreen({ navigation, route }) {
               </View>
             </View>
 
-            {isTech && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>سنوات الخبرة</Text>
-                <View style={styles.inputWrapper}>
-                  <Briefcase size={18} color="#94a3b8" style={styles.inputIcon} />
-                  <TextInput 
-                    style={styles.input}
-                    placeholder="مثال: 5"
-                    keyboardType="numeric"
-                    onChangeText={(val) => setFormData({...formData, experienceYears: val})}
-                  />
-                </View>
-              </View>
-            )}
+
           </View>
 
           {/* Location Section */}

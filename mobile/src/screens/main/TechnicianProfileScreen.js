@@ -11,6 +11,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../../api/api';
 import { getApplianceTypes, getBrands } from '../../api/lookupService';
+import ReliabilityBadge from '../../components/common/ReliabilityBadge';
 
 /**
  * TechnicianProfileScreen - بروفايل الفني العام (للعميل)
@@ -152,19 +153,21 @@ export default function TechnicianProfileScreen() {
             <Text style={styles.statLabel}>مهمة مكتملة</Text>
           </View>
           <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: '#F0F9FF' }]}>
-              <Calendar size={20} color="#0EA5E9" />
+            <View style={[styles.statIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Star size={20} color="#F59E0B" fill="#F59E0B" />
             </View>
-            <Text style={styles.statValue}>{profile.yearsOfExperience}</Text>
-            <Text style={styles.statLabel}>سنوات خبرة</Text>
+            <Text style={styles.statValue}>{profile.reviewCount || 0}</Text>
+            <Text style={styles.statLabel}>تقييم عملاء</Text>
           </View>
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: '#EEF2FF' }]}>
-              <Award size={20} color="#4F46E5" />
-            </View>
-            <Text style={styles.statValue}>{profile.reliabilityScore}%</Text>
-            <Text style={styles.statLabel}>موثوقية</Text>
-          </View>
+        </View>
+
+        {/* Reliability Badge */}
+        <View style={styles.badgeWrapper}>
+          <ReliabilityBadge 
+            score={profile.reliabilityScore} 
+            completedJobs={profile.completedJobs || 0}
+            style={styles.fullWidthBadge}
+          />
         </View>
 
         {/* Specialties */}
@@ -329,8 +332,19 @@ const styles = StyleSheet.create({
   ratingCount: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
 
   // Stats
-  statsGrid: { flexDirection: 'row-reverse', gap: 12, marginBottom: 25 },
+  statsGrid: { flexDirection: 'row-reverse', gap: 12, marginBottom: 20 },
   statItem: { flex: 1, backgroundColor: '#FAFBFD', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+  badgeWrapper: {
+    marginBottom: 25,
+    width: '100%',
+  },
+  fullWidthBadge: {
+    alignSelf: 'stretch',
+    paddingVertical: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
   statIcon: { width: 40, height: 40, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
   statValue: { fontSize: 20, fontWeight: '900', color: '#1E293B', marginBottom: 2 },
   statLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },

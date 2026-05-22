@@ -15,6 +15,10 @@ export const useTechnician = () => {
   const [completedCount, setCompletedCount] = useState(0);
 
   const fetchProfile = useCallback(async () => {
+    if (!user || user.role !== 'technician') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const result = await technicianService.getTechnicianProfile();
     if (result.success) {
@@ -65,6 +69,7 @@ export const useTechnician = () => {
   const stats = useMemo(() => ({
     walletBalance: profile?.user?.walletBalance || 0,
     reliabilityScore: profile?.reliabilityScore || 0,
+    consecutiveCompletedJobs: profile?.consecutiveCompletedJobs || 0,
     overallRating: profile?.rating || 0,
     reviewCount: profile?.reviewCount || 0,
     isVerified: profile?.isVerified || false,

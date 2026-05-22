@@ -6,19 +6,21 @@ import {
   TouchableOpacity, 
   ScrollView, 
   StatusBar,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, LogOut } from 'lucide-react-native';
+import { LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useBookings } from '../../hooks/useBookings';
+import { UPLOADS_URL } from '../../config/constants';
 
 /**
  * HomeScreen - "Dashboard Only" Mode
  * Focused on Statistics and Quick Discovery.
  */
 export default function HomeScreen({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { requests, totalCount } = useBookings();
 
   const getGreeting = () => {
@@ -37,19 +39,30 @@ export default function HomeScreen({ navigation }) {
       {/* Unified Service Header */}
       <View style={styles.serviceHeader}>
         <View style={styles.mainRow}>
-          <View style={styles.userProfile}>
-            <TouchableOpacity style={styles.avatarCircle} onPress={() => navigation.navigate('ProfileTab')}>
-               <Text style={styles.avatarText}>{(user?.firstName || 'C')[0]}</Text>
-            </TouchableOpacity>
-            <View style={styles.welcomeText}>
-               <Text style={styles.greetingLabel}>{getGreeting()}</Text>
-               <Text style={styles.userNameLabel}>{user?.firstName || 'عميلنا العزيز'}</Text>
-            </View>
+          <View style={styles.headerLeft}>
+            <Text style={styles.brandText}>TechnoHome</Text>
           </View>
 
-          <View style={styles.actionIcons}>
-            <TouchableOpacity style={styles.minimalBtn} onPress={signOut}>
-              <LogOut size={22} color="#d24018ff" />
+          <View style={styles.headerRight}>
+            <View style={styles.headerTexts}>
+              <Text style={styles.greetingLabel}>{getGreeting()}</Text>
+              <Text style={styles.userNameLabel}>{user?.firstName || 'عميلنا العزيز'} {user?.lastName || ''}</Text>
+            </View>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              style={styles.avatarContainer} 
+              onPress={() => navigation.navigate('ProfileTab')}
+            >
+              {user?.profileImage ? (
+                <Image 
+                  source={{ uri: user.profileImage.startsWith('http') ? user.profileImage : `${UPLOADS_URL}${user.profileImage}` }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <User size={24} color="#4F46E5" />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -149,29 +162,53 @@ const styles = StyleSheet.create({
   
   serviceHeader: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F1F5F9'
   },
-  mainRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
-  userProfile: { flexDirection: 'row-reverse', alignItems: 'center' },
-  avatarCircle: { 
-    width: 50, 
-    height: 50, 
-    borderRadius: 25, 
-    backgroundColor: '#4F46E5', 
-    justifyContent: 'center', 
+  mainRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12
   },
-  avatarText: { color: 'white', fontSize: 20, fontWeight: '900' },
-  welcomeText: { alignItems: 'flex-end' },
-  greetingLabel: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
-  userNameLabel: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
-  
-  actionIcons: { flexDirection: 'row', gap: 5 },
-  minimalBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  redDot: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, backgroundColor: '#EF4444', borderRadius: 4, borderWidth: 1.5, borderColor: 'white' },
+  headerTexts: {
+    alignItems: 'flex-end',
+    marginRight: 12,
+  },
+  headerLeft: {
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  brandText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
+  },
+  avatarContainer: {
+    position: 'relative',
+    width: 46,
+    height: 46,
+  },
+  avatarImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: '#EEF2FF',
+  },
+  avatarPlaceholder: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
 
   statsStrip: { 
     flexDirection: 'row-reverse', 

@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Activity, 
   Users, 
   Settings, 
   Package, 
@@ -20,7 +19,6 @@ const Sidebar = ({ onLogout }) => {
   const menuItems = [
     { name: 'لوحة التحكم', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'سجل الطلبات', icon: <ClipboardList size={20} />, path: '/requests' },
-    { name: 'البث الحي الآن', icon: <Activity size={20} />, path: '/live-feed', badge: 'LIVE' },
     { name: 'الفنيين', icon: <Users size={20} />, path: '/technicians' },
     { name: 'العملاء', icon: <UserCheck size={20} />, path: '/customers' },
     { name: 'البلاغات والشكاوى', icon: <ShieldAlert size={20} />, path: '/reports' },

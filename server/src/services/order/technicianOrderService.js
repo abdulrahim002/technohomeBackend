@@ -82,6 +82,24 @@ class TechnicianOrderService {
     const request = await ServiceRequest.findOne({ _id: requestId, technician: techId });
     if (!request) throw { status: 404, message: 'الطلب غير موجود' };
     
+    // -----------------------------------------------------
+    // نظام الإغلاق الذاتي (Self-Regulating Lock):
+    // منع الفني من قبول طلبات جديدة إذا كان لديه طلب معلق منذ أكثر من 24 ساعة ولم يغلقه بالـ OTP
+    // -----------------------------------------------------
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const stuckOrder = await ServiceRequest.findOne({
+      technician: techId,
+      status: { $in: ['accepted', 'on_the_way', 'arrived', 'in_progress'] },
+      acceptedAt: { $lte: twentyFourHoursAgo }
+    });
+
+    if (stuckOrder) {
+      throw { 
+        status: 403, 
+        message: 'عذراً، لا يمكنك قبول طلبات جديدة حتى تقوم بإغلاق طلباتك القديمة المعلقة باستخدام رمز الـ OTP من العميل.' 
+      };
+    }
+
     // التحقق بواسطة State Machine
     OrderStateMachine.transition(request, 'accepted');
 

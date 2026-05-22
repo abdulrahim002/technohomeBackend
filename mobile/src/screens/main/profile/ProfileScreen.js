@@ -21,10 +21,13 @@ import {
   UserCheck,
   Lock,
   Info,
-  HelpCircle
+  HelpCircle,
+  Award,
+  Flame
 } from 'lucide-react-native';
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../../../context/AuthContext';
+import { useTechnician } from '../../../hooks/useTechnician';
 import ProfileMenuItem from '../../../components/profile/ProfileMenuItem';
 import ProfileStatCard from '../../../components/profile/ProfileStatCard';
 import { UPLOADS_URL } from '../../../config/constants';
@@ -37,6 +40,9 @@ import { UPLOADS_URL } from '../../../config/constants';
 const ProfileScreen = ({ navigation }) => {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
+  const { stats } = useTechnician();
+
+  const isTechnician = user?.role === 'technician';
 
   // تأكيد تسجيل الخروج
   const handleLogout = () => {
@@ -108,20 +114,56 @@ const ProfileScreen = ({ navigation }) => {
            <Text style={styles.userPhone}>{user?.phone}</Text>
         </View>
 
-        {/* كروت الإحصائيات (المحفظة والـ AI) */}
-        <View style={styles.statsContainer}>
-           <ProfileStatCard 
-             icon={Zap} 
-             label="نقاط AI" 
-             value={user?.aiCredits || 0} 
-             color="#8B5CF6" 
-           />
-           <ProfileStatCard 
-             icon={CreditCard} 
-             label="المحفظة" 
-             value={`${user?.walletBalance || 0} د.ل`} 
-             color="#10B981" 
-           />
+        {/* كروت الإحصائيات (المحفظة والـ AI للفني أو العميل) */}
+        <View style={[styles.statsContainer, isTechnician && styles.statsContainerTech]}>
+          {isTechnician ? (
+            <>
+              <View style={styles.techCard}>
+                <View style={[styles.techIconBox, { backgroundColor: '#4F46E515' }]}>
+                  <Award size={16} color="#4F46E5" />
+                </View>
+                <View style={styles.techContent}>
+                  <Text style={styles.techValue}>{stats.reliabilityScore} / 100</Text>
+                  <Text style={styles.techLabel}>الموثوقية</Text>
+                </View>
+              </View>
+
+              <View style={styles.techCard}>
+                <View style={[styles.techIconBox, { backgroundColor: '#EA580C15' }]}>
+                  <Flame size={16} color="#EA580C" />
+                </View>
+                <View style={styles.techContent}>
+                  <Text style={styles.techValue}>🔥 {stats.consecutiveCompletedJobs}</Text>
+                  <Text style={styles.techLabel}>السلسلة</Text>
+                </View>
+              </View>
+
+              <View style={styles.techCard}>
+                <View style={[styles.techIconBox, { backgroundColor: '#10B98115' }]}>
+                  <CreditCard size={16} color="#10B981" />
+                </View>
+                <View style={styles.techContent}>
+                  <Text style={styles.techValue}>{stats.walletBalance || user?.walletBalance || 0} د.ل</Text>
+                  <Text style={styles.techLabel}>المحفظة</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <ProfileStatCard 
+                icon={Zap} 
+                label="نقاط AI" 
+                value={user?.aiCredits || 0} 
+                color="#8B5CF6" 
+              />
+              <ProfileStatCard 
+                icon={CreditCard} 
+                label="المحفظة" 
+                value={`${user?.walletBalance || 0} د.ل`} 
+                color="#10B981" 
+              />
+            </>
+          )}
         </View>
       </View>
 
@@ -234,6 +276,48 @@ const styles = StyleSheet.create({
     left: 20, 
     right: 20,
     justifyContent: 'space-between'
+  },
+  statsContainerTech: {
+    left: 12,
+    right: 12,
+  },
+  techCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginHorizontal: 4,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { height: 4 },
+  },
+  techIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  techContent: {
+    marginRight: 6,
+    alignItems: 'flex-end',
+    flex: 1,
+  },
+  techValue: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1E293B',
+  },
+  techLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginTop: 2,
   },
 
   content: { flex: 1, paddingHorizontal: 24, paddingTop: 60 },

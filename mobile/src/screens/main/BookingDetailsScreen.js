@@ -146,6 +146,7 @@ export default function BookingDetailsScreen() {
   const isDiagnosedOnly = request.status === 'diagnosed_only';
   const canCancel = request.status === 'pending';
   const isCompleted = request.status === 'completed';
+  const canCall = ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(request.status);
   const hasReview = !!request.review;
 
   return (
@@ -254,10 +255,20 @@ export default function BookingDetailsScreen() {
              
              <View style={styles.techActions}>
                 {!isCompleted && (
-                  <TouchableOpacity style={styles.callBtn} onPress={() => callPerson(request.technician.phone)}>
-                     <Phone size={18} color="#FFF" style={{ marginLeft: 8 }} />
-                     <Text style={styles.callBtnText}>اتصال هاتفياً</Text>
-                  </TouchableOpacity>
+                  canCall ? (
+                    <TouchableOpacity style={styles.callBtn} onPress={() => callPerson(request.technician.phone)}>
+                       <Phone size={18} color="#FFF" style={{ marginLeft: 8 }} />
+                       <Text style={styles.callBtnText}>اتصال هاتفياً</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      style={[styles.callBtn, styles.disabledCallBtn]} 
+                      onPress={() => Alert.alert('تنبيه 📞', 'يمكنك الاتصال بالفني فور قبوله للطلب وتأكيد الحجز.')}
+                    >
+                       <Phone size={18} color="#94A3B8" style={{ marginLeft: 8 }} />
+                       <Text style={[styles.callBtnText, styles.disabledCallBtnText]}>اتصال هاتفياً</Text>
+                    </TouchableOpacity>
+                  )
                 )}
                 {canCancel ? (
                    <TouchableOpacity style={styles.cancelBtn} onPress={cancelBooking}>
@@ -408,6 +419,8 @@ const styles = StyleSheet.create({
   techActions: { flexDirection: 'row-reverse', gap: 12, marginTop: 5 },
   callBtn: { flex: 1, backgroundColor: '#4F46E5', height: 48, borderRadius: 14, flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center' },
   callBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  disabledCallBtn: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  disabledCallBtnText: { color: '#94A3B8' },
   cancelBtn: { paddingHorizontal: 15, height: 48, borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   cancelBtnText: { color: '#EF4444', fontSize: 13, fontWeight: '700' },
 

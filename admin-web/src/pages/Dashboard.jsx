@@ -8,7 +8,8 @@ import {
   Activity,
   AlertTriangle,
   TrendingUp,
-  Wallet
+  Wallet,
+  Download
 } from 'lucide-react';
 import useAxios from '../hooks/useAxios';
 
@@ -58,6 +59,43 @@ const Dashboard = () => {
     fetchStats();
   }, []);
 
+  // تنزيل تقرير الإحصائيات بصيغة CSV
+  const handleDownloadReport = () => {
+    if (!stats) return;
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-LY');
+    const timeStr = now.toLocaleTimeString('ar-LY');
+
+    const rows = [
+      ['تقرير أداء منصة TechnoHome', '', ''],
+      [`تاريخ التقرير: ${dateStr}  الوقت: ${timeStr}`, '', ''],
+      ['', '', ''],
+      ['القسم', 'المؤشر', 'القيمة'],
+      ['المستخدمون', 'إجمالي المستخدمين', stats.users?.total ?? 0],
+      ['المستخدمون', 'عدد الفنيين', stats.users?.technicians ?? 0],
+      ['المستخدمون', 'عدد العملاء', (stats.users?.total ?? 0) - (stats.users?.technicians ?? 0)],
+      ['طلبات الصيانة', 'إجمالي الطلبات', stats.serviceRequests?.total ?? 0],
+      ['طلبات الصيانة', 'الطلبات المكتملة', stats.serviceRequests?.completed ?? 0],
+      ['طلبات الصيانة', 'الطلبات المعلقة', stats.serviceRequests?.pending ?? 0],
+      ['المالية', 'إجمالي أرباح المنصة (د.ل)', stats.financials?.totalRevenue ?? 0],
+      ['المالية', 'سيولة الفنيين (د.ل)', stats.financials?.systemLiquidity ?? 0],
+      ['النظام', 'عدد العلامات التجارية', stats.system?.brands ?? 0],
+      ['النظام', 'عدد أنواع الأجهزة', stats.system?.applianceTypes ?? 0],
+    ];
+
+    const csvContent = '\uFEFF' + rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `technohome_report_${now.toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return (
      <div className="flex items-center justify-center h-[60vh]">
         <Activity className="text-blue-500 animate-spin" size={48} />
@@ -87,7 +125,14 @@ const Dashboard = () => {
           <p className="text-slate-400 font-bold text-sm">هذه نظرة سريعة على أداء TechnoHome اليوم</p>
         </div>
         <div className="flex gap-4">
-           <button className="bg-white px-6 py-3 rounded-2xl text-slate-500 font-bold text-sm border border-slate-200 hover:bg-slate-50 transition-colors">تنزيل التقرير</button>
+           <button 
+             onClick={handleDownloadReport}
+             disabled={!stats}
+             className="flex items-center gap-2 bg-white px-6 py-3 rounded-2xl text-slate-500 font-bold text-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+           >
+             <Download size={16} />
+             تنزيل التقرير
+           </button>
            <button className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 py-3 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95">إضافة فني جديد</button>
         </div>
       </div>

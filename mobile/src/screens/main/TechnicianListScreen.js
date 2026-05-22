@@ -33,6 +33,7 @@ import { getCityNameAr } from '../../config/fixedData';
 import useAuthStore from '../../store/useAuthStore';
 import { useAuth } from '../../context/AuthContext';
 import { useLookups } from '../../hooks/useLookups';
+import ReliabilityBadge from '../../components/common/ReliabilityBadge';
 
 /**
  * TechnicianListScreen - شاشة اكتشاف الفنيين الموحدة
@@ -126,8 +127,6 @@ const TechnicianListScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{`${item.yearsOfExperience || 0} سنوات خبرة`}</Text>
-            <View style={styles.dot} />
             <Text style={styles.metaText}>{getCityNameAr(item.city)}</Text>
             <MapPin size={10} color="#94A3B8" style={{ marginLeft: 4 }} />
           </View>
@@ -140,10 +139,14 @@ const TechnicianListScreen = ({ navigation, route }) => {
             <CheckCircle size={10} color="#10B981" />
             <Text style={styles.reviewCount}>{item.completedJobs || 0} مهمة</Text>
           </View>
+
+          <ReliabilityBadge 
+            score={item.reliabilityScore} 
+            completedJobs={item.completedJobs || 0} 
+            style={{ marginTop: 8 }} 
+          />
         </View>
       </TouchableOpacity>
-
-
     </View>
   );
 

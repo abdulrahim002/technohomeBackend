@@ -5,7 +5,6 @@ import TopBar from './components/layout/TopBar';
 import Dashboard from './pages/Dashboard';
 import Appliances from './pages/Appliances';
 import Brands from './pages/Brands';
-import LiveFeed from './pages/LiveFeed';
 import Technicians from './pages/Technicians';
 import ServiceRequests from './pages/ServiceRequests';
 import ErrorCodes from './pages/ErrorCodes';
@@ -52,7 +51,6 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/requests" element={<ServiceRequests />} />
-              <Route path="/live-feed" element={<LiveFeed />} />
               <Route path="/appliances" element={<Appliances />} />
               <Route path="/brands" element={<Brands />} />
               <Route path="/technicians" element={<Technicians />} />

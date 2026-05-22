@@ -6,10 +6,11 @@ import {
   ScrollView, 
   TouchableOpacity, 
   SafeAreaView, 
-  StatusBar
+  StatusBar,
+  Image
 } from 'react-native';
 import { 
-  LogOut, 
+  User, 
   ChevronLeft, 
   Briefcase, 
   TrendingUp, 
@@ -18,11 +19,13 @@ import {
   Clock,
   ShieldCheck,
   Wallet,
-  Award
+  Award,
+  Flame
 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTechnician } from '../../../hooks/useTechnician';
 import StatCard from '../../../components/common/StatCard';
+import { UPLOADS_URL } from '../../../config/constants';
 
 /**
  * TechnicianDashboard - "Dumb" Screen component.
@@ -36,7 +39,6 @@ const TechnicianDashboard = () => {
   const navigation = useNavigation();
   const {
     user,
-    signOut,
     isOnline,
     toggleOnline,
     greeting,
@@ -51,22 +53,41 @@ const TechnicianDashboard = () => {
     }, [refresh])
   );
 
+  const consecutive = stats.consecutiveCompletedJobs || 0;
+  const remainingForBonus = 5 - (consecutive % 5);
+  const remainingText = remainingForBonus === 1 
+    ? 'أكمل طلباً واحداً إضافياً للحصول على بونص +5 نقاط موثوقية!' 
+    : `أكمل ${remainingForBonus} طلبات إضافية للحصول على بونص +5 نقاط موثوقية!`;
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="default" />
       
       {/* Top Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconBtn} onPress={signOut}>
-          <LogOut size={20} color="#EF4444" />
-        </TouchableOpacity>
-        
-        <View style={styles.profileInfo}>
-          <Text style={styles.greetingText}>{greeting}</Text>
-          <Text style={styles.userNameText}>{user?.firstName}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.brandText}>TechnoHome</Text>
         </View>
 
-        <View style={{ width: 44 }} />
+        <View style={styles.headerRight}>
+          <View style={styles.headerTexts}>
+            <Text style={styles.greetingText}>{greeting}</Text>
+            <Text style={styles.userNameText}>{user?.firstName} {user?.lastName}</Text>
+          </View>
+          <View style={styles.avatarContainer}>
+            {user?.profileImage ? (
+              <Image 
+                source={{ uri: user.profileImage.startsWith('http') ? user.profileImage : `${UPLOADS_URL}${user.profileImage}` }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <User size={24} color="#4F46E5" />
+              </View>
+            )}
+            <View style={[styles.avatarStatusDot, { backgroundColor: isOnline ? '#10B981' : '#EF4444' }]} />
+          </View>
+        </View>
       </View>
 
       <ScrollView 
@@ -104,9 +125,24 @@ const TechnicianDashboard = () => {
               <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
                  <Award size={20} color="#4F46E5" />
               </View>
-              <Text style={[styles.statValue, { color: '#4F46E5' }]}>{stats.reliabilityScore}%</Text>
+              <Text style={[styles.statValue, { color: '#4F46E5' }]}>{stats.reliabilityScore} / 100</Text>
               <Text style={styles.statLabel}>نقاط الموثوقية</Text>
            </View>
+        </View>
+
+        {/* Streak Card */}
+        <View style={styles.streakCard}>
+          <View style={styles.streakIconContainer}>
+            <Flame size={24} color="#EA580C" fill="#EA580C" />
+          </View>
+          <View style={styles.streakTextContent}>
+            <Text style={styles.streakTitle}>
+              سلسلة الإتمام: 🔥 {consecutive} {consecutive === 1 ? 'طلب متتالي' : consecutive === 2 ? 'طلبان متتاليان' : 'طلبات متتالية'}
+            </Text>
+            <Text style={styles.streakSubtitle}>
+              {remainingText}
+            </Text>
+          </View>
         </View>
 
         {/* Rating Summary Card */}
@@ -177,11 +213,67 @@ const TechnicianDashboard = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
-  profileInfo: { alignItems: 'flex-end' },
-  greetingText: { fontSize: 13, fontWeight: '700', color: '#94A3B8', marginBottom: 2 },
-  userNameText: { fontSize: 22, fontWeight: '900', color: '#1E293B' },
-  iconBtn: { width: 44, height: 44, backgroundColor: '#F8FAFC', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 24, 
+    paddingTop: 24, 
+    paddingBottom: 16, 
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F1F5F9' 
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTexts: {
+    alignItems: 'flex-end',
+    marginRight: 12,
+  },
+  headerLeft: {
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  brandText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#4F46E5',
+    letterSpacing: 0.5,
+  },
+  avatarContainer: {
+    position: 'relative',
+    width: 46,
+    height: 46,
+  },
+  avatarImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: '#EEF2FF',
+  },
+  avatarPlaceholder: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+  avatarStatusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+  },
   scrollContent: { paddingBottom: 40 },
   contentWrapper: { paddingHorizontal: 24 },
   statusBanner: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderRadius: 28, marginTop: 24, marginBottom: 24, borderWidth: 1, borderColor: '#F1F5F9' },
@@ -199,8 +291,46 @@ const styles = StyleSheet.create({
   statsGrid: { flexDirection: 'row', gap: 16, marginBottom: 24 },
   statCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 28, borderWidth: 1, borderColor: '#F1F5F9', elevation: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15 },
   iconCircle: { width: 40, height: 40, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  statValue: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 4 },
+  statValue: { fontSize: 22, fontWeight: '900', color: '#1E293B', marginBottom: 4 },
   statLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
+  streakCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    padding: 20,
+    borderRadius: 28,
+    marginBottom: 24,
+    elevation: 4,
+    shadowColor: '#EA580C',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  streakIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#FFEDD5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  streakTextContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  streakTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#C2410C',
+    marginBottom: 4,
+  },
+  streakSubtitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
   premiumRatingCard: { flexDirection: 'row-reverse', backgroundColor: '#F8FAFC', padding: 20, borderRadius: 32, marginBottom: 32, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
   ratingMain: { alignItems: 'center', paddingLeft: 20 },
   ratingBig: { fontSize: 28, fontWeight: '900', color: '#1E293B', marginBottom: 4 },
