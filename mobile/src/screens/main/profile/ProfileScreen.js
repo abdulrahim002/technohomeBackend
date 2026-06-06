@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -28,6 +28,7 @@ import {
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../../../context/AuthContext';
 import { useTechnician } from '../../../hooks/useTechnician';
+import { useFocusEffect } from '@react-navigation/native';
 import ProfileMenuItem from '../../../components/profile/ProfileMenuItem';
 import ProfileStatCard from '../../../components/profile/ProfileStatCard';
 import { UPLOADS_URL } from '../../../config/constants';
@@ -40,9 +41,16 @@ import { UPLOADS_URL } from '../../../config/constants';
 const ProfileScreen = ({ navigation }) => {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
-  const { stats } = useTechnician();
+  const { stats, refresh } = useTechnician();
 
   const isTechnician = user?.role === 'technician';
+
+  // إعادة جلب بيانات المحفظة في كل مرة يُفتح فيها البروفايل
+  useFocusEffect(
+    useCallback(() => {
+      if (isTechnician) refresh();
+    }, [isTechnician, refresh])
+  );
 
   // تأكيد تسجيل الخروج
   const handleLogout = () => {
@@ -115,7 +123,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         {/* كروت الإحصائيات (المحفظة والـ AI للفني أو العميل) */}
-        <View style={[styles.statsContainer, isTechnician && styles.statsContainerTech]}>
+        <View style={[styles.statsContainer, isTechnician ? styles.statsContainerTech : styles.statsContainerClient]}>
           {isTechnician ? (
             <>
               <View style={styles.techCard}>
@@ -149,26 +157,36 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </>
           ) : (
-            <>
-              <ProfileStatCard 
-                icon={Zap} 
-                label="نقاط AI" 
-                value={user?.aiCredits || 0} 
-                color="#8B5CF6" 
-              />
-              <ProfileStatCard 
-                icon={CreditCard} 
-                label="المحفظة" 
-                value={`${user?.walletBalance || 0} د.ل`} 
-                color="#10B981" 
-              />
-            </>
+            <View style={styles.aiCard}>
+              <View style={styles.aiCardTop}>
+                <View style={[styles.aiIconBox, { backgroundColor: '#8B5CF615' }]}>
+                  <Zap size={22} color="#8B5CF6" />
+                </View>
+                <View style={styles.aiTextContainer}>
+                  <Text style={styles.aiTitle}>مساعد التشخيص بالذكاء الاصطناعي</Text>
+                  <Text style={styles.aiSubtitle}>تجديد يومي تلقائي للحصة المجانية</Text>
+                </View>
+              </View>
+              
+              <View style={styles.aiProgressSection}>
+                <View style={styles.aiProgressHeader}>
+                  <Text style={styles.aiCreditsText}>{user?.aiCredits || 0} من 5 محاولات متبقية</Text>
+                  <View style={styles.activeBadge}>
+                    <View style={styles.activeDot} />
+                    <Text style={styles.activeText}>نشط</Text>
+                  </View>
+                </View>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${Math.min(100, ((user?.aiCredits || 0) / 5) * 100)}%` }]} />
+                </View>
+              </View>
+            </View>
           )}
         </View>
       </View>
 
       <ScrollView 
-        style={styles.content} 
+        style={[styles.content, { paddingTop: isTechnician ? 50 : 80 }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
@@ -272,14 +290,104 @@ const styles = StyleSheet.create({
   statsContainer: { 
     flexDirection: 'row', 
     position: 'absolute', 
-    bottom: -35, 
     left: 20, 
     right: 20,
     justifyContent: 'space-between'
   },
   statsContainerTech: {
+    bottom: -35,
     left: 12,
     right: 12,
+  },
+  statsContainerClient: {
+    bottom: -65,
+    left: 20,
+    right: 20,
+  },
+  aiCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 16,
+    elevation: 6,
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.08,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 6 },
+    marginHorizontal: 6,
+  },
+  aiCardTop: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  aiIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiTextContainer: {
+    marginRight: 12,
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  aiTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1E293B',
+  },
+  aiSubtitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  aiProgressSection: {
+    marginTop: 4,
+  },
+  aiProgressHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  aiCreditsText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  activeBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#10B98110',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  activeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 3,
   },
   techCard: {
     flex: 1,

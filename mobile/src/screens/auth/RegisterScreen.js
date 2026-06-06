@@ -10,7 +10,8 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  Modal
 } from 'react-native';
 import { 
   User, 
@@ -23,7 +24,8 @@ import {
   Camera,
   Briefcase,
   Check,
-  Plus
+  Plus,
+  X
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { getCities, getApplianceTypes, getBrands } from '../../api/lookupService';
@@ -57,6 +59,9 @@ export default function RegisterScreen({ navigation, route }) {
     city: '',
     area: ''
   });
+
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -109,6 +114,11 @@ export default function RegisterScreen({ navigation, route }) {
       return;
     }
 
+    if (!acceptedTerms) {
+      Alert.alert("تنبيه", "يرجى الموافقة على الشروط والأحكام للمتابعة.");
+      return;
+    }
+
     setLoading(true);
     try {
       // إذا كان فني نستخدم FormData لرفع الصور
@@ -124,6 +134,7 @@ export default function RegisterScreen({ navigation, route }) {
         submissionData.append('area', formData.area);
         submissionData.append('specialties', JSON.stringify(selectedSpecs));
         submissionData.append('brands', JSON.stringify(selectedBrands));
+        submissionData.append('acceptedTerms', 'true');
 
         if (profileImage) {
           const name = profileImage.split('/').pop();
@@ -135,7 +146,7 @@ export default function RegisterScreen({ navigation, route }) {
           submissionData.append('certificates', { uri, name, type: 'image/jpeg' });
         });
       } else {
-        submissionData = { ...formData, role: 'customer' };
+        submissionData = { ...formData, role: 'client', acceptedTerms: true };
       }
 
       const result = await register(submissionData);
@@ -351,7 +362,95 @@ export default function RegisterScreen({ navigation, route }) {
             </View>
           )}
 
-          <TouchableOpacity style={styles.submitBtn} onPress={handleRegister}>
+          {/* قسم الشروط والأحكام */}
+          <View style={styles.termsContainer}>
+            <TouchableOpacity 
+              style={styles.checkboxWrapper} 
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms && <Check size={14} color="#fff" />}
+              </View>
+            </TouchableOpacity>
+            
+            <Text style={styles.termsText}>
+              أوافق على{' '}
+              <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>
+                الشروط والأحكام الخاصة بالتطبيق
+              </Text>
+            </Text>
+          </View>
+
+          {/* نافذة الشروط والأحكام المنبثقة */}
+          <Modal
+            visible={showTermsModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowTermsModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.closeModalBtn}>
+                    <X color="#64748b" size={20} />
+                  </TouchableOpacity>
+                  <Text style={styles.modalTitle}>الشروط والأحكام لـ {isTech ? 'الفني' : 'العميل'}</Text>
+                </View>
+                
+                <ScrollView style={styles.termsScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.termsIntro}>
+                    مرحباً بك في منصة تكنو هوم. يرجى قراءة الشروط التالية بعناية قبل الموافقة:
+                  </Text>
+                  
+                  {isTech ? (
+                    <>
+                      <Text style={styles.termHeading}>1. الالتزام بالمواعيد المعتمدة</Text>
+                      <Text style={styles.termBody}>يقر الفني بالالتزام التام بالحضور في التوقيت واليوم المتفق عليهما. التأخر أو الإلغاء بدون سبب قاهر يؤثر سلباً على درجة الموثوقية الخاصة بك وقد يعرض حسابك للتجميد.</Text>
+                      
+                      <Text style={styles.termHeading}>2. دقة وأمانة التشخيص الفني</Text>
+                      <Text style={styles.termBody}>يجب تقديم تشخيص حقيقي وصادق للأعطال. يمنع تضخيم المشاكل أو التلاعب بالأسعار لزيادة التكلفة على العميل.</Text>
+                      
+                      <Text style={styles.termHeading}>3. جودة الصيانة وضمان العمل</Text>
+                      <Text style={styles.termBody}>تتعهد بتقديم خدمة صيانة ذات جودة عالية واستخدام قطع غيار متفق عليها مع تقديم ضمان مناسب للعميل.</Text>
+                      
+                      <Text style={styles.termHeading}>4. حفظ خصوصية العملاء والأمانة المهنية</Text>
+                      <Text style={styles.termBody}>يُمنع منعاً باتاً الاحتفاظ بأرقام هواتف العملاء أو مواقعهم أو مشاركتها مع أطراف أخرى، أو تقديم خدمات خارج نطاق التطبيق للالتفاف على المنصة.</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.termHeading}>1. جدية الحجز والالتزام بالمواعيد</Text>
+                      <Text style={styles.termBody}>يُعد حجز الفني التزاماً جاداً. تكرار إلغاء المواعيد دون أسباب مقنعة أو عدم التواجد في مكان الصيانة يؤثر على مستوى حسابك.</Text>
+                      
+                      <Text style={styles.termHeading}>2. سياسة الإلغاء وتعديل المواعيد</Text>
+                      <Text style={styles.termBody}>يمكنك إلغاء الطلب مجاناً قبل الموعد بـ 4 ساعات. إلغاء الحجز بعد تحرك الفني قد يترتب عليه رسوم أو قيود تشغيلية.</Text>
+                      
+                      <Text style={styles.termHeading}>3. الالتزام بالدفع المالي</Text>
+                      <Text style={styles.termBody}>تلتزم بدفع المبلغ الكامل المتفق عليه للفني فور انتهاء الصيانة وتقديم رمز الـ OTP لإتمام الطلب.</Text>
+                      
+                      <Text style={styles.termHeading}>4. توفير بيئة عمل آمنة</Text>
+                      <Text style={styles.termBody}>يجب توفير جو محترم وآمن للفني للعمل، وتواجد شخص بالغ في المنزل أثناء زيارة الصيانة.</Text>
+                    </>
+                  )}
+                </ScrollView>
+                
+                <TouchableOpacity 
+                  style={styles.modalAcceptBtn}
+                  onPress={() => {
+                    setAcceptedTerms(true);
+                    setShowTermsModal(false);
+                  }}
+                >
+                  <Text style={styles.modalAcceptBtnText}>أوافق وألتزم بالشروط</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <TouchableOpacity 
+            style={[styles.submitBtn, !acceptedTerms && styles.submitBtnDisabled]} 
+            onPress={handleRegister}
+            disabled={!acceptedTerms}
+          >
             <Text style={styles.submitBtnText}>{isTech ? 'إرسال طلب الانضمام' : 'إنشاء الحساب'}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -425,6 +524,125 @@ const styles = StyleSheet.create({
   loginLinkBold: {
     color: '#4f46e5',
     fontWeight: '900',
+  },
+  termsContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginHorizontal: 25,
+    marginTop: 20,
+    gap: 10
+  },
+  checkboxWrapper: {
+    padding: 5
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#4f46e5',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff'
+  },
+  checkboxChecked: {
+    backgroundColor: '#4f46e5'
+  },
+  termsText: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+    textAlign: 'right'
+  },
+  termsLink: {
+    color: '#4f46e5',
+    fontWeight: '800',
+    textDecorationLine: 'underline'
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#94a3b8',
+    elevation: 0,
+    shadowOpacity: 0
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end'
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    height: '75%',
+    padding: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 15,
+    marginBottom: 15
+  },
+  closeModalBtn: {
+    padding: 5,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0f172a'
+  },
+  termsScroll: {
+    flex: 1
+  },
+  termsIntro: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'right',
+    lineHeight: 22,
+    marginBottom: 15,
+    fontWeight: '600'
+  },
+  termHeading: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 15,
+    marginBottom: 5,
+    textAlign: 'right'
+  },
+  termBody: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 20,
+    textAlign: 'right',
+    fontWeight: '600',
+    backgroundColor: '#f8fafc',
+    padding: 10,
+    borderRadius: 12
+  },
+  modalAcceptBtn: {
+    backgroundColor: '#4f46e5',
+    height: 55,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    elevation: 3
+  },
+  modalAcceptBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800'
   }
 });
 

@@ -53,6 +53,27 @@ const TechnicianListScreen = ({ navigation, route }) => {
   const [activeSpecialty, setActiveSpecialty] = useState(specialtyId || bookingData?.applianceType || null);
   const [activeCity, setActiveCity] = useState(cityId || bookingData?.serviceAddress?.city || null);
   const [activeBrand, setActiveBrand] = useState(null); // للمستقبل إذا أردنا إضافة فلاتر ماركات
+  const [activeSort, setActiveSort] = useState(null); // 'distance' | 'rating' | null
+
+  // دالة حساب المسافة الجغرافية بصيغة Haversine
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (
+      lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
+      lat1 === null || lon1 === null || lat2 === null || lon2 === null ||
+      (lat1 === 0 && lon1 === 0) || (lat2 === 0 && lon2 === 0)
+    ) {
+      return Infinity;
+    }
+    const R = 6371; // نصف قطر الأرض بالكيلومترات
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // المسافة بالكيلومترات
+  };
 
   // Fetching Technicians
   const fetchTechnicians = useCallback(async () => {
@@ -65,17 +86,46 @@ const TechnicianListScreen = ({ navigation, route }) => {
         },
         headers: { Authorization: `Bearer ${token}` }
       });
-      setTechnicians(res.data.data.technicians || []);
+      
+      const rawTechs = res.data.data.technicians || [];
+      const userCoordinates = user?.location?.coordinates;
+      const userLon = userCoordinates?.[0];
+      const userLat = userCoordinates?.[1];
+
+      console.log(' [DEBUG] User Coordinates:', userCoordinates);
+
+      // حساب المسافة مسبقاً مرة واحدة لكل فني (Performance O(N))
+      const mappedTechs = rawTechs.map(tech => {
+        const techCoordinates = tech.location?.coordinates;
+        const techLon = techCoordinates?.[0];
+        const techLat = techCoordinates?.[1];
+        const distance = calculateDistance(userLat, userLon, techLat, techLon);
+        console.log(` [DEBUG] Tech ${tech.fullName} Coordinates:`, techCoordinates, 'Distance:', distance);
+        return { ...tech, distance };
+      });
+
+      setTechnicians(mappedTechs);
     } catch (err) {
       console.error('[TechList] Fetch failed:', err.message);
     } finally {
       setLoading(false);
     }
-  }, [activeSpecialty, activeCity, token]);
+  }, [activeSpecialty, activeCity, token, user]);
 
   useEffect(() => {
     fetchTechnicians();
   }, [fetchTechnicians]);
+
+  // مصفوفة الفنيين المرتبة ديناميكياً
+  const sortedTechnicians = React.useMemo(() => {
+    let result = [...technicians];
+    if (activeSort === 'distance') {
+      result.sort((a, b) => a.distance - b.distance);
+    } else if (activeSort === 'rating') {
+      result.sort((a, b) => b.rating - a.rating);
+    }
+    return result;
+  }, [technicians, activeSort]);
 
 
   // Filter Pill Component
@@ -129,6 +179,12 @@ const TechnicianListScreen = ({ navigation, route }) => {
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>{getCityNameAr(item.city)}</Text>
             <MapPin size={10} color="#94A3B8" style={{ marginLeft: 4 }} />
+            {item.distance !== undefined && item.distance !== Infinity && (
+              <>
+                <View style={styles.dot} />
+                <Text style={styles.distanceText}>📍 يبعد {item.distance.toFixed(1)} كم</Text>
+              </>
+            )}
           </View>
 
           <View style={styles.ratingRow}>
@@ -147,6 +203,20 @@ const TechnicianListScreen = ({ navigation, route }) => {
           />
         </View>
       </TouchableOpacity>
+    </View>
+  );
+
+  const SkeletonCard = () => (
+    <View style={styles.techCard}>
+      <View style={[styles.cardMain, { opacity: 0.6 }]}>
+        <View style={[styles.imageWrapper, { backgroundColor: '#E2E8F0' }]} />
+        <View style={styles.infoContainer}>
+          <View style={{ width: '60%', height: 18, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 10, alignSelf: 'flex-end' }} />
+          <View style={{ width: '40%', height: 12, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 10, alignSelf: 'flex-end' }} />
+          <View style={{ width: '70%', height: 12, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 12, alignSelf: 'flex-end' }} />
+          <View style={{ width: '100%', height: 25, backgroundColor: '#F1F5F9', borderRadius: 6, alignSelf: 'flex-end' }} />
+        </View>
+      </View>
     </View>
   );
 
@@ -203,14 +273,35 @@ const TechnicianListScreen = ({ navigation, route }) => {
         </ScrollView>
       </View>
 
+      <View style={styles.quickFiltersWrapper}>
+        <TouchableOpacity 
+          style={[styles.quickFilterBtn, activeSort === 'distance' && styles.quickFilterBtnActive]} 
+          onPress={() => setActiveSort(activeSort === 'distance' ? null : 'distance')}
+        >
+          <MapPin size={12} color={activeSort === 'distance' ? '#FFF' : '#4F46E5'} style={{ marginLeft: 4 }} />
+          <Text style={[styles.quickFilterText, activeSort === 'distance' && styles.quickFilterTextActive]}>📍 الأقرب إليّ</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.quickFilterBtn, activeSort === 'rating' && styles.quickFilterBtnActive]} 
+          onPress={() => setActiveSort(activeSort === 'rating' ? null : 'rating')}
+        >
+          <Star size={12} color={activeSort === 'rating' ? '#FFF' : '#4F46E5'} style={{ marginLeft: 4 }} fill={activeSort === 'rating' ? '#FFF' : 'none'} />
+          <Text style={[styles.quickFilterText, activeSort === 'rating' && styles.quickFilterTextActive]}>⭐ الأعلى تقييماً</Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={styles.loadingText}>جاري البحث عن خبراء...</Text>
-        </View>
+        <FlatList
+          data={[1, 2, 3, 4]} // عرض 4 كروت كعينة أثناء التحميل
+          renderItem={() => <SkeletonCard />}
+          keyExtractor={(item) => item.toString()}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
         <FlatList
-          data={technicians}
+          data={sortedTechnicians}
           renderItem={renderItem}
           keyExtractor={(item, index) => item._id || index.toString()}
           contentContainerStyle={styles.listContainer}
@@ -318,7 +409,39 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: 12, fontWeight: '900', color: '#1E293B', marginRight: 3 },
   reviewCount: { fontSize: 10, color: '#94A3B8', fontWeight: '600', marginRight: 4 },
   
-
+  quickFiltersWrapper: {
+    flexDirection: 'row-reverse',
+    paddingHorizontal: 25,
+    marginBottom: 15,
+    gap: 10,
+  },
+  quickFilterBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  quickFilterBtnActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  quickFilterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  quickFilterTextActive: {
+    color: '#FFFFFF',
+  },
+  distanceText: {
+    fontSize: 11,
+    color: '#4F46E5',
+    fontWeight: '700',
+  },
   
   centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: '#64748B', fontWeight: '700' },

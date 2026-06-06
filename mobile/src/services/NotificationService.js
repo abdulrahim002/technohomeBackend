@@ -7,7 +7,8 @@ import api from '../api/api';
 // إعداد كيفية ظهور الإشعارات عندما يكون التطبيق مفتوحاً (Foreground)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -39,11 +40,12 @@ export async function registerForPushNotificationsAsync() {
       Alert.alert('فشل', 'فشل الحصول على تصريح الإشعارات!');
       return;
     }
-    
+
     // الحصول على التوكن الخاص بـ Expo
     try {
-      const projectId = Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
-      
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
+
       if (!projectId) {
         console.warn(' [WARN] Project ID not found in app.json. Remote push notifications will not work.');
         console.warn(' [HELP] To fix this, run: npx eas project:init');
@@ -60,20 +62,6 @@ export async function registerForPushNotificationsAsync() {
   }
 
   return token;
-}
-
-/**
- * وظيفة لاختبار إشعار محلي فوراً
- */
-export async function sendLocalTestNotification() {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "اختبار إشعار محلي 🔔",
-      body: 'إذا رأيت هذا، فهذا يعني أن إعدادات الإشعارات في التطبيق تعمل بنجاح!',
-      data: { test: 'data' },
-    },
-    trigger: null,
-  });
 }
 
 /**

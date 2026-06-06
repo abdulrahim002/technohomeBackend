@@ -31,6 +31,14 @@ export const getCityNameAr = (id) => {
 
 export const getApplianceNameAr = (idOrSlug) => {
   if (!idOrSlug) return 'جهاز عام';
+  
+  // إذا كان المدخل كائناً كاملاً مأخوذاً من قاعدة البيانات
+  if (typeof idOrSlug === 'object') {
+    if (idOrSlug.nameAr) return idOrSlug.nameAr;
+    idOrSlug = idOrSlug._id || idOrSlug.id || '';
+  }
+  
+  if (!idOrSlug) return 'جهاز عام';
   const type = APPLIANCE_TYPES.find(t => t.id === idOrSlug || t.slug === idOrSlug);
   return type ? type.nameAr : (typeof idOrSlug === 'string' && idOrSlug.length > 10 ? 'جهاز صيانة' : idOrSlug);
 };

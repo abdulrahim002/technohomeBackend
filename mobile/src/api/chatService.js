@@ -17,6 +17,17 @@ export const getChatHistory = async (identifier, page = 1) => {
   }
 };
 
+export const getChatHistoryWithUser = async (otherUserId, page = 1) => {
+  try {
+    const response = await api.get(`/chat/history-with-user/${otherUserId}`, {
+      params: { page, limit: 50 }
+    });
+    return { success: true, data: response.data.data.messages };
+  } catch (error) {
+    return { success: false, message: error.response?.data?.message || 'فشل جلب الرسائل' };
+  }
+};
+
 // تحديد الرسائل كمقروءة
 export const markMessagesAsRead = async (identifier) => {
   try {

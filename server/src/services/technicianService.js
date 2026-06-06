@@ -23,7 +23,7 @@ class TechnicianService {
 
       const techProfiles = await TechnicianProfile.find(query).populate({
         path: 'user',
-        select: 'firstName lastName phone city profileImage',
+        select: 'firstName lastName phone city profileImage location',
         populate: { path: 'city', select: 'name nameAr' }
       });
 
@@ -63,7 +63,8 @@ class TechnicianService {
         reliabilityScore: profile.reliabilityScore || 0,
         bio: profile.bio,
         profileImage: profile.user.profileImage || null, // ✅ الصورة من User وليس TechnicianProfile
-        isOnline: profile.isAvailable
+        isOnline: profile.isAvailable,
+        location: profile.user.location
       }));
 
       console.log(`[DEBUG] Found ${result.length} technicians`);

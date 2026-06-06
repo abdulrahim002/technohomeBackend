@@ -8,6 +8,8 @@ class GeminiService {
     // قائمة الموديلات المرتبة حسب استقرار الحصة المجانية والسرعة
     // الموديلات الموثق عملها لحساب العميل (بناءً على فحص API)
     this.modelOptions = [
+      "models/gemini-2.5-flash",       // خيار أول (أحدث ومستقر وحصة جديدة)
+      "models/gemini-2.5-flash-lite",  // خيار سريع واقتصادي
       "models/gemini-2.0-flash",       // خيار أول (سريع جداً)
       "models/gemini-flash-latest",    // البديل المستقر لـ 1.5 Flash
       "models/gemini-pro-latest",      // البديل لـ 1.5 Pro

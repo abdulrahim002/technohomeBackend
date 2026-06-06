@@ -25,12 +25,16 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter (Images only)
+// File filter (Images and Audio only)
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
+  const isImage = file.mimetype.startsWith('image/');
+  const isAudio = file.mimetype.startsWith('audio/') || 
+                  /\.(m4a|mp3|caf|wav|aac|3gp|ogg)$/i.test(file.originalname);
+  
+  if (isImage || isAudio) {
     cb(null, true);
   } else {
-    cb(new Error('الرجاء رفع صور فقط!'), false);
+    cb(new Error('الرجاء رفع صور أو تسجيلات صوتية فقط!'), false);
   }
 };
 

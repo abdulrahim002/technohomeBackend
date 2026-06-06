@@ -27,8 +27,12 @@ const MessageSchema = new mongoose.Schema({
   },
   messageType: {
     type: String,
-    enum: ['text', 'image', 'location'],
+    enum: ['text', 'image', 'location', 'audio'],
     default: 'text'
+  },
+  audioDuration: {
+    type: Number, // duration in seconds
+    required: false
   },
   isRead: {
     type: Boolean,

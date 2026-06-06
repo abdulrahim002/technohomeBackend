@@ -7,7 +7,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Modal } from 'react-native';
 import axios from 'axios';
 
-import { API_URL, GOOGLE_MAPS_API_KEY, TIME_SLOTS } from '../../config/constants';
+import { API_URL, GOOGLE_MAPS_API_KEY, TIME_SLOTS, UPLOADS_URL } from '../../config/constants';
 import { getApplianceNameAr, getCityNameAr, getCityCoords, LIBYAN_CITIES } from '../../config/fixedData';
 import useAuthStore from '../../store/useAuthStore';
 import { useLookups } from '../../hooks/useLookups';
@@ -33,6 +33,18 @@ const getLibyaDateTime = () => {
   return { todayStr, currentDecimalHour };
 };
 
+const formatDateInLibya = (date) => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Tripoli',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type)?.value || '0';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+};
+
 /**
  * شاشة تأكيد الحجز النهائية (Final Booking Screen)
  * الدور: عرض ملخص الطلب وتأكيد الحجز مع الفني.
@@ -40,7 +52,7 @@ const getLibyaDateTime = () => {
  * 
  */
 const FinalBookingScreen = ({ navigation, route }) => {
-  const { selectedTechnician, bookingData, diagnosisData } = route.params;
+  const { selectedTechnician, bookingData, diagnosisData, requestId } = route.params;
   const mapRef = React.useRef(null);
   const modalMapRef = React.useRef(null);
   const { token } = useAuthStore();
@@ -50,7 +62,8 @@ const FinalBookingScreen = ({ navigation, route }) => {
   const [selectedImage, setSelectedImage] = useState(null);
 
   // إعدادات الخريطة والموقع
-  const targetCityId = bookingData?.serviceAddress?.city || bookingData?.cityId;
+  const rawCityId = bookingData?.serviceAddress?.city || bookingData?.serviceAddress?.cityId || bookingData?.cityId;
+  const targetCityId = rawCityId && typeof rawCityId === 'object' ? (rawCityId._id || rawCityId.id) : rawCityId;
   
   // محاولة جلب الإحداثيات من المدن الديناميكية أولاً
   const dynamicCity = cities.find(c => (c._id || c.id) === targetCityId);
@@ -66,6 +79,10 @@ const FinalBookingScreen = ({ navigation, route }) => {
   const [markerCoordinate, setMarkerCoordinate] = useState(null);
   const [isMapModalVisible, setIsMapModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const getFullImageUri = (uri) => {
+    if (!uri) return null;
+    return uri.startsWith('http') ? uri : `${UPLOADS_URL}${uri.replace(/^\/+/, '')}`;
+  };
 
   // -----------------------------------------
   // نظام إدارة المواعيد (Time Slots)
@@ -93,7 +110,7 @@ const FinalBookingScreen = ({ navigation, route }) => {
 
       const d = new Date();
       d.setDate(d.getDate() + i);
-      const dateString = d.toISOString().split('T')[0];
+      const dateString = formatDateInLibya(d);
       const dayName = d.toLocaleDateString('ar-LY', { weekday: 'short' });
       days.push({ dateString, dayName, dayNum: d.getDate() });
     }
@@ -250,9 +267,14 @@ const FinalBookingScreen = ({ navigation, route }) => {
         imageUrl = uploadRes.data.data.imageUrl;
       }
 
+      // إذا كان requestId موجوداً فهذا يعني أننا نحدّث طلباً محفوظاً (diagnosed_only)
+      // بدلاً من إنشاء طلب جديد مكرر
       await axios.post(`${API_URL}/service-requests`, {
+        ...(requestId && { id: requestId }),
         technicianId: selectedTechnician.techId || selectedTechnician._id,
-        applianceType: bookingData.applianceType || bookingData.relatedSpecialty,
+        applianceType: bookingData.applianceType
+          ? (typeof bookingData.applianceType === 'object' ? (bookingData.applianceType._id || bookingData.applianceType.id) : bookingData.applianceType)
+          : bookingData.relatedSpecialty,
         brand: bookingData.brand || 'غير محدد',
         problemDescription: bookingData.problemDescription || `طلب صيانة ${getApplianceNameAr(bookingData.applianceType || bookingData.relatedSpecialty)}`,
         preComputedDiagnosis: diagnosisData?.aiDiagnosis,
@@ -260,7 +282,7 @@ const FinalBookingScreen = ({ navigation, route }) => {
         scheduledDate: selectedDate,
         timeSlot: selectedTimeSlot,
         serviceAddress: {
-           cityId: bookingData.cityId || bookingData.serviceAddress?.city || bookingData.serviceAddress?.cityId,
+           cityId: targetCityId,
            street: addressDetails || 'لا يوجد تفاصيل إضافية',
            location: {
              type: 'Point',
@@ -314,7 +336,7 @@ const FinalBookingScreen = ({ navigation, route }) => {
             </View>
             <View style={styles.imageContainer}>
                {selectedTechnician.profileImage ? (
-                 <Image source={{ uri: selectedTechnician.profileImage }} style={styles.profileImg} />
+                 <Image source={{ uri: getFullImageUri(selectedTechnician.profileImage) }} style={styles.profileImg} />
                ) : (
                  <View style={styles.placeholderImg}><Text style={styles.placeholderText}>{`TH`}</Text></View>
                )}

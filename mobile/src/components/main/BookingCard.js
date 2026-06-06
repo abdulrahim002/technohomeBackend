@@ -10,6 +10,10 @@ import { TIME_SLOTS } from '../../config/constants';
  *  
  */
 const BookingCard = ({ item, onDetails, onCancel, onDelete, onChat, onRate, onRebook }) => {
+   const stopAndRun = (e, cb) => {
+      e?.stopPropagation?.();
+      cb?.();
+   };
    const getStatusMeta = (status) => {
       const s = status
          ? String(status).toLowerCase().trim().replace(/-/g, '_').replace(/\s+/g, '_')
@@ -88,11 +92,11 @@ const BookingCard = ({ item, onDetails, onCancel, onDelete, onChat, onRate, onRe
             </View>
             <View style={styles.actions}>
                {item.status === 'waiting_for_confirmation' && (
-                  <TouchableOpacity onPress={onCancel} style={styles.actionBtn}>
+                  <TouchableOpacity onPress={(e) => stopAndRun(e, onCancel)} style={styles.actionBtn}>
                      <AlertCircle size={18} color="#F59E0B" />
                   </TouchableOpacity>
                )}
-               <TouchableOpacity onPress={onDelete} style={[styles.actionBtn, { backgroundColor: '#FEF2F2' }]}>
+               <TouchableOpacity onPress={(e) => stopAndRun(e, onDelete)} style={[styles.actionBtn, { backgroundColor: '#FEF2F2' }]}>
                   {['completed', 'expired', 'rejected', 'cancelled'].includes(item.status) ? (
                      <Trash2 size={18} color="#EF4444" />
                   ) : (
@@ -100,22 +104,22 @@ const BookingCard = ({ item, onDetails, onCancel, onDelete, onChat, onRate, onRe
                   )}
                </TouchableOpacity>
                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(item.status) && (
-                  <TouchableOpacity onPress={onChat} style={[styles.actionBtn, { backgroundColor: '#EEF2FF' }]}>
+                  <TouchableOpacity onPress={(e) => stopAndRun(e, onChat)} style={[styles.actionBtn, { backgroundColor: '#EEF2FF' }]}>
                      <MessageSquare size={18} color="#4F46E5" />
                   </TouchableOpacity>
                )}
                {item.status === 'completed' && !item.isRated && (
-                  <TouchableOpacity onPress={onRate} style={[styles.actionBtn, { backgroundColor: '#FFFBEB' }]}>
+                  <TouchableOpacity onPress={(e) => stopAndRun(e, onRate)} style={[styles.actionBtn, { backgroundColor: '#FFFBEB' }]}>
                      <Star size={18} color="#F59E0B" />
                   </TouchableOpacity>
                )}
                {item.status === 'diagnosed_only' && (
-                  <TouchableOpacity onPress={onDetails} style={[styles.actionBtn, { backgroundColor: '#EEF2FF', width: 'auto', paddingHorizontal: 12 }]}>
+                  <TouchableOpacity onPress={(e) => stopAndRun(e, onDetails)} style={[styles.actionBtn, { backgroundColor: '#EEF2FF', width: 'auto', paddingHorizontal: 12 }]}>
                      <Text style={{ color: '#4F46E5', fontSize: 10, fontWeight: '900' }}>اطلب فني</Text>
                   </TouchableOpacity>
                )}
                {['expired', 'rejected'].includes(item.status) && (
-                  <TouchableOpacity onPress={onRebook} style={[styles.actionBtn, { backgroundColor: '#EEF2FF', width: 'auto', paddingHorizontal: 12, flexDirection: 'row', gap: 4 }]}>
+                  <TouchableOpacity onPress={(e) => stopAndRun(e, onRebook)} style={[styles.actionBtn, { backgroundColor: '#EEF2FF', width: 'auto', paddingHorizontal: 12, flexDirection: 'row', gap: 4 }]}>
                      <RefreshCw size={14} color="#4F46E5" />
                      <Text style={{ color: '#4F46E5', fontSize: 10, fontWeight: '900' }}>فني آخر</Text>
                   </TouchableOpacity>

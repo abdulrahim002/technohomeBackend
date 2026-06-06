@@ -12,11 +12,12 @@ router.get('/conversations', chatController.getConversations);
 
 // جلب تاريخ المحادثة لطلب معين أو غرفة دردشة
 router.get('/history/:requestId', chatController.getHistory);
+router.get('/history-with-user/:otherUserId', chatController.getHistoryWithUser);
 
 // تحديد الرسائل كمقروءة
 router.patch('/read/:identifier', chatController.markAsRead);
 
-// رفع صورة في المحادثة
-router.post('/upload', upload.single('image'), chatController.uploadImage);
+// رفع مرفق (صورة أو صوت) في المحادثة
+router.post('/upload', upload.single('image'), chatController.uploadAttachment);
 
 module.exports = router;

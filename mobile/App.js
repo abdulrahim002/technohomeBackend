@@ -14,21 +14,6 @@ export default function App() {
   React.useEffect(() => {
     // تسجيل الإشعارات عند بدء التطبيق
     registerForPushNotificationsAsync();
-
-    // الاستماع للإشعارات أثناء فتح التطبيق
-    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log(' [DEBUG] Notification Received:', notification);
-    });
-
-    // الاستماع للضغط على الإشعار
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(' [DEBUG] Notification Clicked:', response);
-    });
-
-    return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
-    };
   }, []);
 
   return (

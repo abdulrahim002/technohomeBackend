@@ -29,7 +29,9 @@ export default function TechnicianProfileScreen() {
   const [appliancesList, setAppliancesList] = useState([]);
   const [brandsList, setBrandsList] = useState([]);
   const [formConfig, setFormConfig] = useState({
-    applianceType: bookingData?.applianceType || bookingData?.relatedSpecialty || '',
+    applianceType: bookingData?.applianceType 
+      ? (typeof bookingData.applianceType === 'object' ? (bookingData.applianceType._id || bookingData.applianceType.id) : bookingData.applianceType)
+      : (bookingData?.relatedSpecialty || ''),
     brand: bookingData?.brand || '',
     problemDescription: bookingData?.problemDescription || ''
   });
@@ -61,6 +63,12 @@ export default function TechnicianProfileScreen() {
   }, [techId]);
 
   const handleBookPress = () => {
+    // إذا كان لدينا معرف الطلب مسبقاً، لا داعي لطلب التفاصيل لأنها مخزنة بالفعل في النظام
+    if (requestId) {
+      proceedToBooking();
+      return;
+    }
+
     // التحقق هل ينقصنا بيانات هامة (لأن العميل دخل بطريقة البحث المباشر)
     if (!formConfig.applianceType || !formConfig.brand || !formConfig.problemDescription) {
       setModalVisible(true);

@@ -5,14 +5,14 @@ import { Zap, CheckCircle } from 'lucide-react-native';
 /**
  * DiagnosisCard - عرض نتائج التشخيص الذكي AI بشكل احترافي
  */
-export const DiagnosisCard = ({ diagnosis, steps }) => {
+export const DiagnosisCard = ({ diagnosis, steps, title = '����� ������� �����' }) => {
   if (!diagnosis) return null;
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Zap size={20} color="#8B5CF6" fill="#8B5CF6" />
-        <Text style={styles.title}>نتائج التشخيص الذكي</Text>
+        <Text style={styles.title}>{title}</Text>
       </View>
       
       <Text style={styles.mainText}>{diagnosis}</Text>
@@ -40,3 +40,4 @@ const styles = StyleSheet.create({
   stepItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
   stepText: { fontSize: 13, color: '#6D28D9', flex: 1, textAlign: 'right' }
 });
+

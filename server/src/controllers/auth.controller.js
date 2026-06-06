@@ -21,7 +21,7 @@ const generateToken = (id, role) =>
 
 exports.register = async (req, res, next) => {
   try {
-    let { firstName, lastName, phone, password, role, city, area, specialties, brands, yearsOfExperience } = req.body;
+    let { firstName, lastName, phone, password, role, city, area, specialties, brands, yearsOfExperience, acceptedTerms } = req.body;
     const profileImage = req.files?.profileImage ? `uploads/${req.files.profileImage[0].filename}` : '';
     const certificateImages = req.files?.certificates ? req.files.certificates.map(f => `uploads/${f.filename}`) : [];
 
@@ -38,16 +38,24 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ status: 'fail', message: 'الرجاء إدخال كافة البيانات المطلوبة والمدينة' });
     }
 
-    // 2. التحقق من عدم التكرار
+    // 2. تحديد الدور (client هو الافتراضي) - يُحدد أولاً قبل التحقق من الشروط
+    const userRole = role === 'technician' ? 'technician' : (role === 'admin' ? 'admin' : 'client');
+
+    // 3. التحقق من الشروط والأحكام فقط للعميل والفني (ليس الأدمن)
+    if (userRole !== 'admin') {
+      const hasAccepted = acceptedTerms === 'true' || acceptedTerms === true;
+      if (!hasAccepted) {
+        return res.status(400).json({ status: 'fail', message: 'يجب الموافقة على الشروط والأحكام للمتابعة' });
+      }
+    }
+
+    // 4. التحقق من عدم تكرار رقم الهاتف
     const exists = await User.findOne({ phone });
     if (exists) {
       return res.status(400).json({ status: 'fail', message: 'رقم الهاتف مسجل بالفعل' });
     }
 
-    // 3. تحديد الدور (client هو الافتراضي)
-    const userRole = role === 'technician' ? 'technician' : 'client';
-
-    // 4. إنشاء المستخدم
+    // 5. إنشاء المستخدم
     const user = await User.create({
       firstName,
       lastName,
@@ -56,7 +64,8 @@ exports.register = async (req, res, next) => {
       role: userRole,
       city,
       area,
-      profileImage
+      profileImage,
+      acceptedTerms: userRole !== 'admin' ? true : false
     });
 
     // 5. إنشاء ملف الفني فوراً مع التحقق من صحة البيانات

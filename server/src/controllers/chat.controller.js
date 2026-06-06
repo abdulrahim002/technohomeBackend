@@ -45,23 +45,33 @@ exports.getConversations = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-exports.uploadImage = async (req, res, next) => {
+exports.getHistoryWithUser = async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'الرجاء اختيار صورة' });
+    const { otherUserId } = req.params;
+    const { page, limit } = req.query;
+    const messages = await chatService.getChatHistoryWithUser(req.userId, otherUserId, page, limit);
+    res.status(200).json({ status: 'success', data: { messages } });
+  } catch (error) { next(error); }
+};
 
-    const { recipientId, serviceRequest, chatRoomId } = req.body;
+exports.uploadAttachment = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'الرجاء اختيار ملف' });
+
+    const { recipientId, serviceRequest, chatRoomId, messageType, audioDuration } = req.body;
     const senderId = req.userId;
 
-    // تكوين رابط الصورة
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`;
+    // تكوين رابط الملف المرفوع
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`;
 
     const savedMsg = await chatService.saveMessage({
       serviceRequest,
       chatRoomId,
       senderId,
       recipientId,
-      content: imageUrl,
-      messageType: 'image'
+      content: fileUrl,
+      messageType: messageType || 'image',
+      audioDuration: audioDuration ? Number(audioDuration) : undefined
     });
 
     // إرسال عبر السوكت للطرف الآخر

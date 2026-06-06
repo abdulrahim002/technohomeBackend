@@ -8,6 +8,20 @@ let io;
 // يسمح بمعرفة من هو متصل حتى مع عدة أجهزة
 const userSocketMap = new Map(); // userId -> Set(socketId)
 const socketUserMap = new Map(); // socketId -> userId
+const userActiveChatMap = new Map(); // userId -> { partnerId, identifier }
+
+/**
+ * Check if user is currently viewing the chat with partnerId (and matching identifier if provided)
+ */
+const isUserInChat = (userId, partnerId, identifier) => {
+  if (!userId || !partnerId) return false;
+  const active = userActiveChatMap.get(userId.toString());
+  if (!active) return false;
+
+  const partnerMatch = String(active.partnerId) === String(partnerId);
+  const identifierMatch = !identifier || !active.identifier || String(active.identifier) === String(identifier);
+  return partnerMatch && identifierMatch;
+};
 
 /**
  * تهيئة Socket.io وإدارة دورة حياة الاتصالات
@@ -141,6 +155,27 @@ const initSocket = (server) => {
     });
 
     // ========================================
+    // 5. تتبع المحادثة النشطة (Active Chat Tracking)
+    // ========================================
+    socket.on('enterChat', (data) => {
+      const userId = socketUserMap.get(socket.id);
+      if (!userId || !data) return;
+      const { partnerId, identifier } = data;
+      userActiveChatMap.set(userId.toString(), {
+        partnerId: partnerId ? partnerId.toString() : null,
+        identifier: identifier ? identifier.toString() : null
+      });
+      console.log(`💬 User ${userId} entered chat with partner ${partnerId} (identifier: ${identifier})`);
+    });
+
+    socket.on('leaveChat', () => {
+      const userId = socketUserMap.get(socket.id);
+      if (!userId) return;
+      userActiveChatMap.delete(userId.toString());
+      console.log(`💬 User ${userId} left chat`);
+    });
+
+    // ========================================
     // 2. عند قطع الاتصال — تحديث isOnline
     // ========================================
     socket.on('disconnect', async () => {
@@ -157,6 +192,7 @@ const initSocket = (server) => {
         // إذا لم يتبقَ أي socket لهذا المستخدم → set isOnline: false
         if (sockets.size === 0) {
           userSocketMap.delete(userId);
+          userActiveChatMap.delete(userId.toString());
           try {
             await User.findByIdAndUpdate(userId, { isOnline: false });
             io.emit('userStatusChanged', { userId, isOnline: false });
@@ -184,5 +220,6 @@ const getIO = () => {
 
 module.exports = {
   initSocket,
-  getIO
+  getIO,
+  isUserInChat
 };

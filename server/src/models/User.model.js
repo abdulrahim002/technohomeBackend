@@ -77,8 +77,7 @@ const UserSchema = new mongoose.Schema({
   },
   area: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Area',
-    required: [true, 'المنطقة مطلوبة']
+    ref: 'Area'
   },
   address: {
     street: String,
@@ -127,7 +126,12 @@ const UserSchema = new mongoose.Schema({
     type: Date
   },
   passwordResetToken: String,
-  passwordResetExpires: Date
+  passwordResetExpires: Date,
+  acceptedTerms: {
+    type: Boolean,
+    default: false
+    // التحقق من القبول يتم في الـ controller وليس هنا، حتى لا يتأثر الأدمن
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

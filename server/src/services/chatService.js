@@ -7,7 +7,7 @@ class ChatService {
   /**
    * حفظ الرسالة في قاعدة البيانات وإرسال إشعار دفع إذا لزم الأمر
    */
-  async saveMessage({ serviceRequest, chatRoomId, senderId, recipientId, content, messageType }) {
+  async saveMessage({ serviceRequest, chatRoomId, senderId, recipientId, content, messageType, audioDuration }) {
     const messageData = {
       sender: senderId,
       recipient: recipientId,
@@ -17,6 +17,7 @@ class ChatService {
 
     if (serviceRequest) messageData.serviceRequest = serviceRequest;
     if (chatRoomId) messageData.chatRoomId = chatRoomId;
+    if (audioDuration) messageData.audioDuration = audioDuration;
 
     const message = await Message.create(messageData);
 
@@ -28,34 +29,50 @@ class ChatService {
 
     // إرسال إشعار دفع (Push Notification) للطرف الآخر
     if (recipient) {
-      const title = `رسالة جديدة من ${sender.firstName}`;
-      
-      // تحسين نص الإشعار إذا كانت الرسالة صورة
-      let body = content;
-      if (messageType === 'image') {
-        body = 'أرسل لك صورة 📷';
-      } else {
-        body = content.length > 50 ? content.substring(0, 50) + '...' : content;
-      }
-      
-      const payload = { 
-        type: 'chat', 
-        senderId: senderId.toString(),
-        senderName: `${sender.firstName} ${sender.lastName}`,
-        serviceRequest: serviceRequest ? serviceRequest.toString() : '',
-        chatRoomId: chatRoomId || '',
-        content: body
-      };
-
-      // إرسال الإشعار دائماً لضمان وصول التنبيه حتى لو كان التطبيق مفتوحاً على شاشة أخرى
-      // 1. إرسال عبر Expo (الأولوية)
-      if (recipient.expoPushToken) {
-        await expoService.sendPushNotification(recipient.expoPushToken, title, body, payload);
+      // التحقق من تواجد المستلم في نفس المحادثة
+      let isInSameChat = false;
+      try {
+        const socketService = require('./socketService');
+        const identifier = serviceRequest || chatRoomId;
+        if (socketService.isUserInChat && socketService.isUserInChat(recipientId.toString(), senderId.toString(), identifier ? identifier.toString() : null)) {
+          isInSameChat = true;
+          console.log(`[Push Notification] Skipped for user ${recipientId} because they are in the same chat screen with user ${senderId}`);
+        }
+      } catch (err) {
+        console.error('Error checking active chat status:', err);
       }
 
-      // 2. إرسال عبر FCM (البديل)
-      if (recipient.fcmToken) {
-        await fcmService.sendPushNotification(recipient.fcmToken, title, body, payload);
+      if (!isInSameChat) {
+        const title = `رسالة جديدة من ${sender.firstName}`;
+        
+        // تحسين نص الإشعار إذا كانت الرسالة صورة أو تسجيلاً صوتياً
+        let body = content;
+        if (messageType === 'image') {
+          body = 'أرسل لك صورة 📷';
+        } else if (messageType === 'audio') {
+          body = 'أرسل لك تسجيلاً صوتياً 🎙️';
+        } else {
+          body = content.length > 50 ? content.substring(0, 50) + '...' : content;
+        }
+        
+        const payload = { 
+          type: 'chat', 
+          senderId: senderId.toString(),
+          senderName: `${sender.firstName} ${sender.lastName}`,
+          serviceRequest: serviceRequest ? serviceRequest.toString() : '',
+          chatRoomId: chatRoomId || '',
+          content: body
+        };
+
+        // 1. إرسال عبر Expo (الأولوية)
+        if (recipient.expoPushToken) {
+          await expoService.sendPushNotification(recipient.expoPushToken, title, body, payload);
+        }
+
+        // 2. إرسال عبر FCM (البديل)
+        if (recipient.fcmToken) {
+          await fcmService.sendPushNotification(recipient.fcmToken, title, body, payload);
+        }
       }
     }
 
@@ -146,10 +163,16 @@ class ChatService {
       
       const otherUser = await User.findById(otherUserId).select('firstName lastName profileImage');
       
-      // تحسين النص المعروض في قائمة المحادثات للصور
-      const lastMessageContent = conv.lastMessage.messageType === 'image' 
-        ? 'أرسل صورة 📷' 
-        : conv.lastMessage.content;
+      // تحسين النص المعروض في قائمة المحادثات حسب نوع الرسالة
+      let lastMessageContent;
+      if (conv.lastMessage.messageType === 'image') {
+        lastMessageContent = '📷 صورة';
+      } else if (conv.lastMessage.messageType === 'audio') {
+        lastMessageContent = '🎙️ رسالة صوتية';
+      } else {
+        lastMessageContent = conv.lastMessage.content;
+      }
+
 
       return {
         id: conv._id,
@@ -161,6 +184,22 @@ class ChatService {
     }));
 
     return populatedConversations;
+  }
+
+  async getChatHistoryWithUser(userId, otherUserId, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+    const messages = await Message.find({
+      $or: [
+        { sender: userId, recipient: otherUserId },
+        { sender: otherUserId, recipient: userId }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('sender', 'firstName lastName profileImage');
+
+    return messages.reverse();
   }
 }
 

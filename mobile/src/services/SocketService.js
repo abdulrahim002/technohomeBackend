@@ -27,7 +27,8 @@ export const connectSocket = (userId) => {
     autoConnect: true,
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 5
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: Infinity
   });
 
   socket.on('connect', () => {

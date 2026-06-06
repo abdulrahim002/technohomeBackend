@@ -45,6 +45,7 @@ import { useJobDetails } from '../../../hooks/useJobDetails';
 import { 
   ServiceInfoCard 
 } from '../../../components/main/ServiceInfoCard';
+import { DiagnosisCard } from '../../../components/main/DiagnosisCard';
 
 import JobStepper from '../../../components/main/JobStepper';
 import CompleteJobModal from '../../../components/main/CompleteJobModal';
@@ -167,21 +168,25 @@ const TechnicianJobDetails = () => {
            <ChevronRight size={24} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>تفاصيل المهمة</Text>
-        <View style={styles.headerActions}>
-           <TouchableOpacity 
-             style={[styles.backBtn, { marginRight: 10 }]} 
-             onPress={() => navigation.navigate('Chat', { 
-               requestId: request._id, 
-               recipientId: request.customer?._id, 
-               recipientName: `${request.customer?.firstName} ${request.customer?.lastName}` 
-             })}
-           >
-              <MessageSquare size={20} color="#4F46E5" />
-           </TouchableOpacity>
-           <TouchableOpacity style={styles.backBtn} onPress={() => callPerson(request.customer?.phone)}>
-              <Phone size={20} color="#4F46E5" />
-           </TouchableOpacity>
-        </View>
+        {request.status !== 'pending' ? (
+          <View style={styles.headerActions}>
+             <TouchableOpacity 
+               style={[styles.backBtn, { marginRight: 10 }]} 
+               onPress={() => navigation.navigate('Chat', { 
+                 requestId: request._id, 
+                 recipientId: request.customer?._id, 
+                 recipientName: `${request.customer?.firstName} ${request.customer?.lastName}` 
+               })}
+             >
+                <MessageSquare size={20} color="#4F46E5" />
+             </TouchableOpacity>
+             <TouchableOpacity style={styles.backBtn} onPress={() => callPerson(request.customer?.phone)}>
+                <Phone size={20} color="#4F46E5" />
+             </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.backBtn} />
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
@@ -253,6 +258,15 @@ const TechnicianJobDetails = () => {
           brand={request.brand}
           problemDescription={request.problemDescription}
         />
+
+        {/* AI Diagnosis Result (Show after accepting the job only if it was an AI diagnosis) */}
+        {request.status !== 'pending' && request.aiDiagnosis?.diagnosis && (
+          <DiagnosisCard 
+            title={request.diagnosisType === 'ai' ? 'نتائج التشخيص الذكي' : 'تفاصيل التشخيص'}
+            diagnosis={request.aiDiagnosis?.diagnosis} 
+            steps={request.aiDiagnosis?.steps} 
+          />
+        )}
 
       </ScrollView>
 

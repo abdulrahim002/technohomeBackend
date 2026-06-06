@@ -58,8 +58,11 @@ const TechnicianJobCard = ({ item, onPress, hasConflict }) => {
 
       <View style={styles.cardFooter}>
          <View style={styles.footerItem}>
-            <Text style={styles.footerText}>{item.serviceAddress?.cityId?.nameAr || 'طرابلس'}</Text>
-            <MapPin size={14} color="#94A3B8" style={{ marginLeft: 6 }} />
+            <Text style={[styles.footerText, item.distance !== undefined && { color: '#4F46E5', fontWeight: '800' }]}>
+               {item.serviceAddress?.cityId?.nameAr || 'طرابلس'}
+               {item.distance !== undefined && ` • يبعد ${item.distance.toFixed(1)} كم`}
+            </Text>
+            <MapPin size={14} color={item.distance !== undefined ? "#4F46E5" : "#94A3B8"} style={{ marginLeft: 6 }} />
          </View>
          <View style={styles.footerItem}>
             <Text style={styles.footerText}>
@@ -91,9 +94,9 @@ const styles = StyleSheet.create({
   applianceInfo: { flex: 1, alignItems: 'flex-end' },
   applianceName: { fontSize: 17, fontWeight: '900', color: '#1E293B', marginBottom: 2 },
   brandName: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  cardFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F8FAFC', paddingTop: 16 },
-  footerItem: { flexDirection: 'row-reverse', alignItems: 'center' },
-  footerText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  cardFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, borderTopWidth: 1, borderTopColor: '#F8FAFC', paddingTop: 16 },
+  footerItem: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4 },
+  footerText: { fontSize: 12, fontWeight: '700', color: '#64748B', flexShrink: 1 },
   cardConflict: { borderColor: '#FECACA', backgroundColor: '#FEF2F2' },
   conflictBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 8 },
   conflictText: { fontSize: 10, fontWeight: '800', color: '#DC2626' }

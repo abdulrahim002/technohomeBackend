@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import useAuthStore from '../../store/useAuthStore';
+import { UPLOADS_URL } from '../../config/constants';
 
 /**
  * ConversationsScreen - شاشة استعراض المحادثات النشطة
@@ -27,6 +28,38 @@ const ConversationsScreen = () => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const getFullImageUri = (uri) => {
+    if (!uri) return null;
+    return uri.startsWith('http') ? uri : `${UPLOADS_URL}${uri.replace(/^\/+/, '')}`;
+  };
+
+  const mergeConversationsByUser = useCallback((items = []) => {
+    const map = new Map();
+
+    items.forEach((conv) => {
+      const otherUserId = conv?.otherUser?._id;
+      if (!otherUserId) return;
+
+      const existing = map.get(otherUserId);
+      if (!existing) {
+        map.set(otherUserId, { ...conv });
+        return;
+      }
+
+      const existingTime = new Date(existing.lastMessageTime).getTime();
+      const currentTime = new Date(conv.lastMessageTime).getTime();
+      const latest = currentTime > existingTime ? conv : existing;
+
+      map.set(otherUserId, {
+        ...latest,
+        unreadCount: (existing.unreadCount || 0) + (conv.unreadCount || 0),
+      });
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime)
+    );
+  }, []);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -34,7 +67,7 @@ const ConversationsScreen = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.status === 'success') {
-        setConversations(res.data.data.conversations);
+        setConversations(mergeConversationsByUser(res.data.data.conversations));
       }
     } catch (err) {
       console.error('[Conversations] Fetch failed:', err.message);
@@ -42,7 +75,7 @@ const ConversationsScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, mergeConversationsByUser]);
 
   useEffect(() => {
     fetchConversations();
@@ -82,6 +115,7 @@ const ConversationsScreen = () => {
         navigation.navigate('Chat', {
           requestId: isRoom ? null : item.id,
           chatRoomId: isRoom ? item.id : null,
+          unifiedByUser: true,
           recipientId: item.otherUser._id,
           recipientName: `${item.otherUser.firstName} ${item.otherUser.lastName}`
         });
@@ -89,7 +123,7 @@ const ConversationsScreen = () => {
     >
       <View style={styles.avatarContainer}>
         {item.otherUser.profileImage ? (
-          <Image source={{ uri: item.otherUser.profileImage }} style={styles.avatar} />
+          <Image source={{ uri: getFullImageUri(item.otherUser.profileImage) }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>{item.otherUser.firstName.charAt(0)}</Text>

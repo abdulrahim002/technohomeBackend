@@ -103,6 +103,7 @@ graph TD
 * **`lastCreditsReset`:** طابع زمني لحساب وقت إعادة تصفير حصة الذكاء الاصطناعي (كل 24 ساعة).
 * **`isActive`:** قيمة منطقية (`Boolean` افتراضياً `true`) تتيح للمشرفين حظر أو إلغاء تجميد الحسابات.
 * **`passwordResetToken` & `passwordResetExpires`:** حقول أمنية مشفرة لإدارة فلو الـ OTP واستعادة الحسابات.
+* **`acceptedTerms`:** حقل منطقي (`Boolean` إجباري للفنيين والعملاء) يوثق موافقة المستخدم الصريحة على الشروط والأحكام كشرط مسبق ومحمي لإنشاء الحساب.
 
 ### 🛠️ ب. نموذج ملف الفني المهني (`TechnicianProfile.model.js`)
 يرتبط بعلاقة رأس برأس (1:1) مع نموذج المستخدم، ويحوي البيانات التشغيلية والموثوقية:
@@ -175,10 +176,12 @@ graph TD
 
 ### 🛡️ سياسة الخصوصية وحماية بيانات الأطراف (Data Sanitization):
 1. **أثناء حالة الانتظار (`pending`):**
-   * يقوم نظام السيرفر تلقائياً بتطبيق فلتر أمان صارم (Privacy Sanitizer).
-   * **يتم حظر** إرسال رقم هاتف العميل، وإحداثياته الجغرافية الدقيقة، وتفاصيل البناء والشقة للفني. تظهر له تفاصيل عامة فقط (الاسم، المدينة، نوع الجهاز، العطل).
+   * يقوم نظام السيرفر تلقائياً بتطبيق فلتر أمان صارم (Privacy Sanitizer) في الملف [technicianOrderService.js](file:///d:/ProjectIT/server/src/services/order/technicianOrderService.js).
+   * **يتم حظر** إرسال رقم هاتف العميل (يستبدل بنص `"مخفي حتى القبول"`).
+   * **يتم إخفاء** إحداثيات الموقع الدقيقة (`location` تصبح `undefined`) ويتم حجب تفاصيل العنوان الحساسة كالبناية والشقة (تستبدل بنص `"مخفي"`).
+   * **البديل الجغرافي المطور:** يقوم السيرفر بحساب المسافة الجغرافية بالكيلومترات بين الفني والعميل باستخدام معادلة هافيرسين (Haversine) وإرسالها للفني كـ `distance` ليتمكن من رؤية البعد الجغرافي للطلب دون انتهاك خصوصية العميل.
 2. **بعد التحول لحالة القبول (`accepted`):**
-   * بمجرد إتمام القبول وسحب الرصيد، يزيل السيرفر الفلتر ويكشف البيانات للفني ليتمكن من التواصل ومباشرة الحركة.
+   * بمجرد إتمام القبول وسحب الرصيد والعمولة المحددة من محفظة الفني، يزيل السيرفر الفلتر تلقائياً ويكشف البيانات للفني (رقم الهاتف الفعلي، الإحداثيات الجغرافية الكاملة، تفاصيل العنوان السكني) ليتمكن من التواصل ومباشرة الحركة.
 
 ### 💰 منطق إدارة عمولات المحفظة النقديّة (Financial Ledger Logic):
 * نظراً لطبيعة الأسواق المحلية القائمة على الدفع النقدي الفوري من العميل للفني (Cash On Delivery)، لا توجد محفظة للعميل بل محفظة للفني فقط على التطبيق.
@@ -362,27 +365,41 @@ sequenceDiagram
 
 ## 9. الكتالوج الشامل لمسارات واجهة برمجة التطبيقات (API Route Reference)
 
-جميع مسارات النظام مهيكلة ومحمية بالكامل، وتعمل تحت لاحقة أساسية مشتركة هي `/api`:
+جميع مسارات النظام مهيكلة ومحمية بالكامل وصارمة الأدوار (RBAC)، وتعمل تحت لاحقة أساسية مشتركة هي `/api`:
 
-### 🔐 أ. مسارات المصادقة والمستخدمين (`/api/auth`)
-* `POST /register`: إنشاء حساب جديد للعميل أو الفني مع رفع الصورة الشخصية والشهادات المهنية للتحقق منها إدارياً.
+### 🔐 أ. مسارات المصادقة والمستخدمين العامين (`/api/auth`)
+* `POST /register`: إنشاء حساب جديد للعميل أو الفني مع رفع الصورة الشخصية والشهادات الفنية والتحقق منها إدارياً.
 * `POST /login`: تسجيل الدخول وتوليد رمز المصادقة الآمن JWT.
 * `POST /forgot-password`: توليد وإرسال رمز OTP للمستخدم عبر حسابه لاستعادة كلمة المرور.
 * `POST /reset-password-otp`: مطابقة الرمز واستعادة تعيين كلمة المرور الجديدة.
 * `GET /me` (محمي): جلب البيانات الشخصية المفصلة وجلسة المستخدم النشطة حالياً.
 * `POST /refresh-token` (محمي): تجديد وإطالة عمر رمز الـ JWT للاتصال المستمر.
 * `PATCH /change-password` (محمي): تغيير كلمة المرور للمستخدم المسجل.
-* `PATCH /update-profile` (محمي): تحديث البيانات الشخصية والموقع وتفاصيل السكن.
+* `PATCH /update-profile` (محمي): تحديث البيانات الشخصية والموقع وتفاصيل السكن العامة.
 
-### 🛠️ ب. مسارات طلبات الصيانة والتفاعل (`/api/service-requests`)
-* `GET /lookups/brands`: جلب العلامات التجارية النشطة لتعزيز قوائم الاختيار.
-* `GET /lookups/appliances`: جلب أنواع الأجهزة الكهربائية المدعومة للصيانة.
-* `GET /lookups/cities`: جلب هيكل المدن والمناطق التابعة لها ديناميكياً للتحضير الجغرافي.
-* `POST /analyze` (محمي - عميل): استدعاء ذكاء Gemini لتشخيص الأعطال وتوليد إرشادات الإصلاح الفورية.
-* `POST /upload-image` (محمي): رفع صور المشكلة والحصول على المسار السحابي.
+### 👤 ب. مسارات إدارة المستخدمين والمحافظ (`/api/users`)
+* `GET /profile` (محمي): جلب الملف التعريفي الكامل للمستخدم الحالي.
+* `PATCH /profile` (محمي): تعديل البيانات الشخصية والتفصيلية للملف.
+* `PATCH /location` (محمي): المزامنة التلقائية لإحداثيات المستخدم الحالية (خط الطول والعرض) مع السيرفر.
+* `PATCH /fcm-token` (محمي): تحديث رمز إشعارات الهواتف لخدمة Firebase (FCM).
+* `PATCH /expo-push-token` (محمي): تحديث رمز إشعارات خدمة Expo للمحاكيات والتطوير.
+* `GET /wallet/history` (محمي): استعراض كشف الحسابات والحركات المالية للمحفظة بالفني.
+* `GET /wallet/export` (محمي): استخراج كشوف العمليات المالية للفني كملف Excel مالي.
+* `GET /technicians` (محمي - عميل): استعلام وسرد الفنيين المتاحين للحجز المباشر.
+* `GET /technician-profile` (محمي - فني): جلب البيانات المهنية لملف الفني الموثق.
+* `PATCH /technician/availability` (محمي - فني): تغيير حالة النشاط واستقبل الطلبات للفني (متاح / غير متاح).
+* `POST /onboarding` (محمي - فني): استكمال إعدادات وتخصصات الفني وماركاته وبداية تفعيل حسابه.
+* `GET /admin/:userId` (محمي - أدمن): استرجاع بيانات مستخدم معين بواسطة المعرف الفريد.
+
+### 🛠️ ج. مسارات طلبات الصيانة والتفاعل (`/api/service-requests`)
+* `GET /lookups/brands`: جلب العلامات التجارية المعتمدة والنشطة بالنظام.
+* `GET /lookups/appliances`: جلب أنواع الأجهزة المدعومة بالمنصة (التخصصات).
+* `GET /lookups/cities`: جلب هيكل المدن مقترناً بمناطقها الفرعية المتاحة.
+* `POST /analyze` (محمي - عميل): استدعاء محرك الذكاء الاصطناعي Gemini لتشخيص الأعطال وتوليد إرشادات الإصلاح الفورية.
+* `POST /upload-image` (محمي): رفع صور المشكلة والحصول على مسارات الحفظ السحابي.
 * `POST /` (محمي - عميل): إنشاء أو تعديل طلب صيانة (هجين/مباشر) مع التحقق الحاسم من تضارب الجدولة.
 * `GET /my-requests` (محمي - عميل): جلب سجل الطلبات والمتابعة التاريخية للعميل.
-* `GET /technicians/discover` (محمي - عميل): تصفية واكتشاف الفنيين القريبين جغرافياً حسب التخصص والتقييم والماركة المحددة.
+* `GET /technicians/discover` (محمي - عميل): تصفية واكتشاف الفنيين القريبين جغرافياً حسب التخصص والتقييم وموقع العميل الحالي.
 * `GET /technicians/:techId/profile` (محمي): جلب الملف المهني الموثق والتقييمات للفني المحدد.
 * `GET /technicians/:techId/unavailable-slots` (محمي): فحص المواعيد المحجوزة مسبقاً للفني لمنع التضارب عند الحجز.
 * `POST /:id/review` (محمي - عميل): تقديم تقييم حقيقي وكتابة مراجعة ونجم الموثوقية للفني بعد إتمام العمل.
@@ -395,10 +412,30 @@ sequenceDiagram
 * `PATCH /:id/complete` (محمي - فني): تقديم رمز الـ OTP لإغلاق المهمة بالكامل واحتساب الأجور وتوزيع نقاط الموثوقية والسلسلة.
 * `DELETE /:id/cancel` (محمي - فني): إلغاء الفني الحجز القائم (تطبيق خصم -5 نقاط ومحو السلسلة Streak وإعادة الطلب للعملاء).
 * `GET /:id` (محمي - مشترك): الحصول على تفاصيل الطلب بالكامل وعرض محتوياته وتطورات حالاته.
-* `PATCH /:id/reset-technician` (محمي - عميل): سحب الطلب من الفني الحالي الموجه له وإعادته لحالة العامة المتاحة للجميع.
-* `DELETE /:id` (محمي - عميل): حذف أو إلغاء الطلب من جهة العميل.
+* `PATCH /:id/reset-technician` (محمي - العميل): سحب الطلب من الفني الحالي الموجه له وإعادته للحالة العامة المتاحة للجميع.
+* `DELETE /:id` (محمي - العميل): حذف أو إلغاء الطلب من جهة العميل.
 
-### 🖥️ ج. مسارات الإدارة والأعمال التشغيلية للـ Admin (`/api/admin`)
+### 💬 د. مسارات نظام المحادثات الفورية (/api/chat)
+*جميع هذه المسارات تتطلب مصادقة مستخدم نشطة:*
+* `GET /conversations`: جلب قائمة غرف المحادثات التاريخية والنشطة للمستخدم.
+* `GET /history/:requestId`: جلب سجل رسائل الدردشة المرتبطة بطلب صيانة معين.
+* `GET /history-with-user/:otherUserId`: جلب تاريخ الرسائل المباشرة مع مستخدم آخر.
+* `PATCH /read/:identifier`: تعليم الرسائل كقرأت لتحديث عداد الإشعارات.
+* `POST /upload`: رفع مرفقات الوسائط والصور والملفات الصوتية داخل غرف الدردشة المعتمدة.
+
+### ⚠️ هـ. مسارات أكواد الأعطال الصيانة (/api/error-codes)
+* `GET /search` (محمي): مسار مفتوح لكافة المستخدمين للبحث عن أكواد الأعطال وأسبابها وحلولها المقترحة.
+* `POST /` (محمي - أدمن): إضافة كود عطل صيانة جديد لقاعدة البيانات.
+* `GET /` (محمي - أدمن): سرد كافة أكواد الأعطال المسجلة في النظام.
+* `PATCH /:id` (محمي - أدمن): تعديل تفاصيل كود عطل قائم.
+* `DELETE /:id` (محمي - أدمن): مسح كود عطل صيانة نهائياً.
+
+### 📢 و. مسارات البلاغات وحل النزاعات (/api/reports)
+* `POST /submit` (محمي): لتمكين العميل أو الفني من رفع بلاغ شكوى أو مشكلة تشغيلية للإدارة.
+* `PATCH /:id/resolve` (محمي - أدمن): إغلاق البلاغ وتعديل حالته إلى تمت المعالجة.
+* `GET /` (محمي - أدمن): استعراض كامل الشكاوى والبلاغات الواردة من المستخدمين.
+
+### 🖥️ ز. مسارات الإدارة والأعمال التشغيلية للـ Admin (`/api/admin`)
 *جميع هذه المسارات تتطلب حتماً صلاحية Role الصارمة بصفتها مسارات Admin:*
 * `GET /users`: جلب وإدارة قائمة المستخدمين بالكامل مع خيارات البحث والتصنيف.
 * `POST /users/:userId/toggle-status`: حظر أو إلغاء حظر حساب مستخدم أو فني بالكامل.
@@ -432,6 +469,358 @@ sequenceDiagram
    * **`isClient`:** يتأكد من أن دور المستخدم الفعلي هو `client` لمنع الفنيين أو المتسللين من العبث بطلبات العملاء الآخرين.
    * **`isTechnician`:** يضمن أن فواعل الفنيين هي من تقوم بتعديل الحالات التشغيلية أو محاولة استلام عمولات.
    * **`isAdmin`:** جدار الحماية الحديدي للمسارات الخلفية، يتأكد من مطابقة دور المشرف الإداري الحصري لمنع أي مستخدم عادي من الوصول لأدوات المحفظة المالية والشحن أو تحديث الجداول المرجعية.
+
+---
+
+## 11. إضافة نظام "الشروط والأحكام" لإنشاء الحساب (Terms & Conditions Integration)
+
+يهدف هذا النظام الفرعي لضمان التزام أطراف المنصة (العميل والفني) باللوائح التشغيلية والتنظيمية لمشروع **تكنو هوم**، وتوثيق موافقتهم القانونية كشرط مسبق لإنشاء الحساب لمنع المنازعات وضمان الجدية.
+
+### 📊 أ. مخطط تدفق التحقق والموافقة (Approval Flow Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as العميل / الفني (تطبيق الجوال)
+    participant UI as واجهة التسجيل (RegisterScreen)
+    participant API as خادم النظام (Express Server)
+    participant DB as قاعدة البيانات (MongoDB)
+
+    User->>UI: إدخال البيانات وتفعيل خيار الموافقة (Checkbox)
+    Note over UI: زر "إنشاء الحساب" يصبح نشطاً ومفعلاً
+    User->>UI: الضغط على "إنشاء الحساب"
+    UI->>UI: التحقق المحلي (Validate acceptedTerms === true)
+    alt التحقق المحلي ناجح
+        UI->>API: إرسال طلب POST /api/auth/register محتوياً على (acceptedTerms: true)
+        Note over API: فحص الميدلوير والتحقق من الحقل في Controller
+        alt التحقق في السيرفر ناجح
+            API->>DB: حفظ نموذج المستخدم مع حقل (acceptedTerms: true)
+            DB-->>API: نجاح الحفظ وقبول العملية
+            API-->>UI: استجابة 201 (نجاح إنشاء الحساب + توكن المصادقة)
+            UI-->>User: توجيه لشاشة الدخول وعرض رسالة النجاح
+        else التحقق في السيرفر فشل (محاولة تلاعب بالطلب)
+            API-->>UI: استجابة 400 (خطأ: يجب الموافقة على الشروط والأحكام)
+            UI-->>User: عرض تنبيه بالخطأ وتجميد التسجيل
+        end
+    else التحقق المحلي فشل (الزر معطل برمجياً)
+        UI-->>User: منع إرسال الطلب وإظهار تلميح توضيحي
+    end
+```
+
+### ⚖️ ب. البنود الأساسية للشروط والأحكام (Legal Clauses)
+
+#### 1. بنود شروط وأحكام العميل (Customer Terms):
+* **جدية الحجز والالتزام بالمواعيد:** يُقر العميل بأن حجز الفني عبر المنصة يُعد التزاماً جاداً بطلب الخدمة. في حال تكرار إلغاء الحجوزات دون سبب مقنع أو عدم التواجد في الموعد المحدد، يحق لإدارة التطبيق اتخاذ إجراءات تشمل تخفيض تصنيف الحساب أو تجميده مؤقتاً.
+* **سياسة إلغاء وتعديل المواعيد:** يُسمح للعميل بإلغاء أو تعديل الحجز مجاناً قبل الموعد المحدد بفترة لا تقل عن **4 ساعات**. في حال الإلغاء المتأخر أو بعد تحرك الفني (وصول حالة الطلب إلى `on_the_way` أو `arrived`)، قد يتم فرض رسوم إلغاء أو اتخاذ تدابير تقييدية للحد من إساءة استخدام الخدمة.
+* **الالتزام بالدفع الكامل والاتفاق المالي:** يلتزم العميل بدفع القيمة المالية الإجمالية المتفق عليها للصيانة (بما يشمل قيمة الكشف، وأجور يد الفني، وأسعار قطع الغيار المعتمدة) فور انتهاء العمل وتقديم رمز الإغلاق للتحقق المالي (`closingOTP`). الدفع يكون نقداً (كاش) للفني كقاعدة عامة للتشغيل، ويمنع تماماً محاولة التهرب من الدفع أو مساومة الفني خارج الأطر المحددة بالتطبيق.
+* **توفير بيئة عمل آمنة ومحترمة:** يلتزم العميل بتوفير بيئة عمل آمنة ومناسبة للفني لإتمام أعمال الصيانة (بما في ذلك تواجد شخص بالغ أثناء الزيارة، وإبعاد أي مخاطر أو حيوانات قد تعيق العمل). يُمنع أي شكل من أشكال التعدي اللفظي أو الجسدي على الفني، وللإدارة الحق في اللجوء للجهات القانونية في حال حدوث أي انتهاك.
+
+#### 2. بنود شروط وأحكام الفني (Technician Terms):
+* **الالتزام المطلق بالمواعيد المعتمدة:** يقر الفني بالالتزام بالحضور في التوقيت واليوم المتفق عليهما للطلب. في حال عدم الالتزام أو الإلغاء بدون عذر قاهر، تنخفض تلقائياً درجة الموثوقية للفني (`reliabilityScore`) ويتم تصفير سلسلة الإتمام المتتالي (`consecutiveCompletedJobs`) مع فرض غرامات تخصم من المحفظة أو تعليق الحساب عند التكرار.
+* **دقة وأمانة التشخيص الفني:** يلتزم الفني بتقديم تشخيص صادق ودقيق للمشكلة استناداً إلى خبرته المهنية وأدوات الفحص. يُمنع منعاً باتاً تضخيم الأعطال أو اختلاق مشاكل غير حقيقية بغرض زيادة التكلفة على العميل.
+* **جودة الصيانة وضمان العمل:** يتعهد الفني بتقديم خدمة صيانة ذات جودة عالية تتطابق مع المعايير المهنية، مع استخدام قطع غيار أصلية متفق عليها، وتقديم ضمان مناسب للعميل على الخدمة المقدمة وقطع الغيار المركبة لفترة محددة.
+* **الأمانة المهنية وحفظ خصوصية العملاء:** يُقر الفني بالمحافظة على السرية التامة لبيانات العميل التي يتم الكشف عنها بعد قبول الطلب (مثل الاسم، رقم الهاتف، والموقع الجغرافي الدقيق). يُمنع تماماً استخدام هذه البيانات لأغراض خارجة عن نطاق الصيانة، أو حفظها، أو التواصل مع العميل لأغراض شخصية، أو محاولة إجراء أعمال صيانة مستقلة خارج المنصة (إلتفاف على النظام لتهريب العمولات).
+
+---
+
+### 💻 ج. الخطوات البرمجية للتنفيذ والتطوير (Implementation Roadmap)
+
+#### 1. تحديث نموذج قاعدة البيانات في السيرفر `User.model.js`
+يجب إضافة حقل `acceptedTerms` للتأكد من تخزين موافقة المستخدم برمجياً في قاعدة البيانات MongoDB كشرط إجباري:
+* **الملف المراد تعديله:** [User.model.js](file:///d:/ProjectIT/server/src/models/User.model.js)
+* **التعديل المقترح:**
+```javascript
+// إضافة الحقل التالي في Schema التعريف:
+acceptedTerms: {
+  type: Boolean,
+  required: [true, 'يجب الموافقة على الشروط والأحكام للمتابعة'],
+  validate: {
+    validator: function (v) {
+      return v === true; // يمنع حفظ false في قاعدة البيانات
+    },
+    message: 'يجب الموافقة على الشروط والأحكام للمتابعة'
+  }
+}
+```
+
+#### 2. تحديث وحدة التحكم بالتسجيل في السيرفر `auth.controller.js`
+التحقق من وصول قيمة `acceptedTerms` وتمريرها عند استدعاء `User.create`:
+* **الملف المراد تعديله:** [auth.controller.js](file:///d:/ProjectIT/server/src/controllers/auth.controller.js)
+* **التعديل المقترح:**
+```javascript
+// في الدالة exports.register (سطر 24):
+let { firstName, lastName, phone, password, role, city, area, specialties, brands, yearsOfExperience, acceptedTerms } = req.body;
+
+// تحويل الحقل المنطقي من FormData إذا وصل كنص
+const hasAccepted = acceptedTerms === 'true' || acceptedTerms === true;
+
+// إضافة التحقق ضمن التحققات الأساسية:
+if (!hasAccepted) {
+  return res.status(400).json({ status: 'fail', message: 'يجب الموافقة على الشروط والأحكام للمتابعة' });
+}
+
+// تمرير القيمة عند إنشاء المستخدم User.create:
+const user = await User.create({
+  firstName,
+  lastName,
+  phone,
+  password,
+  role: userRole,
+  city,
+  area,
+  profileImage,
+  acceptedTerms: true // تم التأكد من موافقته
+});
+```
+
+#### 3. تحديث واجهة التسجيل في تطبيق الجوال `RegisterScreen.js`
+إضافة واجهة منبثقة (Modal) وحالة لمربع الاختيار (Checkbox) مع تعطيل زر الحساب برمجياً:
+* **الملف المراد تعديله:** [RegisterScreen.js](file:///d:/ProjectIT/mobile/src/screens/auth/RegisterScreen.js)
+* **التعديل المقترح:**
+  * **الخطوة أ:** استيراد المكونات المطلوبة من React Native و Lucide:
+    ```javascript
+    import { Modal, Pressable } from 'react-native';
+    import { ShieldAlert, X } from 'lucide-react-native';
+    ```
+  * **الخطوة ب:** تعريف المتغيرات والحالات الجديدة للتحكم بالشروط:
+    ```javascript
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [showTermsModal, setShowTermsModal] = useState(false);
+    ```
+  * **الخطوة ج:** إرسال القيمة في الطلب وضمن فحص الصلاحية في `handleRegister`:
+    ```javascript
+    if (!acceptedTerms) {
+      Alert.alert("تنبيه", "يرجى الموافقة على الشروط والأحكام للمتابعة.");
+      return;
+    }
+    // إضافة acceptedTerms للبيانات المرسلة:
+    if (isTech) {
+      submissionData.append('acceptedTerms', 'true');
+    } else {
+      submissionData = { ...formData, role: 'customer', acceptedTerms: true };
+    }
+    ```
+  * **الخطوة د:** إضافة الكود الرسومي لمربع الاختيار وزر فتح الشروط في واجهة المستخدم (قبل زر التسجيل مباشرة):
+    ```javascript
+    {/* قسم الشروط والأحكام */}
+    <View style={styles.termsContainer}>
+      <TouchableOpacity 
+        style={styles.checkboxWrapper} 
+        onPress={() => setAcceptedTerms(!acceptedTerms)}
+      >
+        <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+          {acceptedTerms && <Check size={14} color="#fff" />}
+        </View>
+      </TouchableOpacity>
+      
+      <Text style={styles.termsText}>
+        أوافق على{' '}
+        <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>
+          الشروط والأحكام الخاصة بالتطبيق
+        </Text>
+      </Text>
+    </View>
+    ```
+  * **الخطوة هـ:** تصميم نافذة الشروط والأحكام (Modal) بألوان متناسقة وعصرية:
+    ```javascript
+    {/* نافذة الشروط والأحكام المنبثقة */}
+    <Modal
+      visible={showTermsModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowTermsModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.closeModalBtn}>
+              <X color="#64748b" size={20} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>الشروط والأحكام لـ {isTech ? 'الفني' : 'العميل'}</Text>
+          </View>
+          
+          <ScrollView style={styles.termsScroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.termsIntro}>
+              مرحباً بك في منصة تكنو هوم. يرجى قراءة الشروط التالية بعناية قبل الموافقة:
+            </Text>
+            
+            {isTech ? (
+              <>
+                <Text style={styles.termHeading}>1. الالتزام بالمواعيد المعتمدة</Text>
+                <Text style={styles.termBody}>يقر الفني بالالتزام التام بالحضور في التوقيت واليوم المتفق عليهما. التأخر أو الإلغاء بدون سبب قاهر يؤثر سلباً على درجة الموثوقية الخاصة بك وقد يعرض حسابك للتجميد.</Text>
+                
+                <Text style={styles.termHeading}>2. دقة وأمانة التشخيص الفني</Text>
+                <Text style={styles.termBody}>يجب تقديم تشخيص حقيقي وصادق للأعطال. يمنع تضخيم المشاكل أو التلاعب بالأسعار لزيادة التكلفة على العميل.</Text>
+                
+                <Text style={styles.termHeading}>3. جودة الصيانة وضمان العمل</Text>
+                <Text style={styles.termBody}>تتعهد بتقديم خدمة صيانة ذات جودة عالية واستخدام قطع غيار متفق عليها مع تقديم ضمان مناسب للعميل.</Text>
+                
+                <Text style={styles.termHeading}>4. حفظ خصوصية العملاء والأمانة المهنية</Text>
+                <Text style={styles.termBody}>يُمنع منعاً باتاً الاحتفاظ بأرقام هواتف العملاء أو مواقعهم أو مشاركتها مع أطراف أخرى، أو تقديم خدمات خارج نطاق التطبيق للالتفاف على المنصة.</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.termHeading}>1. جدية الحجز والالتزام بالمواعيد</Text>
+                <Text style={styles.termBody}>يُعد حجز الفني التزاماً جاداً. تكرار إلغاء المواعيد دون أسباب مقنعة أو عدم التواجد في مكان الصيانة يؤثر على مستوى حسابك.</Text>
+                
+                <Text style={styles.termHeading}>2. سياسة الإلغاء وتعديل المواعيد</Text>
+                <Text style={styles.termBody}>يمكنك إلغاء الطلب مجاناً قبل الموعد بـ 4 ساعات. إلغاء الحجز بعد تحرك الفني قد يترتب عليه رسوم أو قيود تشغيلية.</Text>
+                
+                <Text style={styles.termHeading}>3. الالتزام بالدفع المالي</Text>
+                <Text style={styles.termBody}>تلتزم بدفع المبلغ الكامل المتفق عليه للفني فور انتهاء الصيانة وتقديم رمز الـ OTP لإتمام الطلب.</Text>
+                
+                <Text style={styles.termHeading}>4. توفير بيئة عمل آمنة</Text>
+                <Text style={styles.termBody}>يجب توفير جو محترم وآمن للفني للعمل، وتواجد شخص بالغ في المنزل أثناء زيارة الصيانة.</Text>
+              </>
+            )}
+          </ScrollView>
+          
+          <TouchableOpacity 
+            style={styles.modalAcceptBtn}
+            onPress={() => {
+              setAcceptedTerms(true);
+              setShowTermsModal(false);
+            }}
+          >
+            <Text style={styles.modalAcceptBtnText}>أوافق وألتزم بالشروط</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    ```
+  * **الخطوة و:** تحديث زر التسجيل ليكون معطلاً بصرياً ووظيفياً إذا لم يتم قبول الشروط:
+    ```javascript
+    <TouchableOpacity 
+      style={[styles.submitBtn, !acceptedTerms && styles.submitBtnDisabled]} 
+      onPress={handleRegister}
+      disabled={!acceptedTerms}
+    >
+      <Text style={styles.submitBtnText}>{isTech ? 'إرسال طلب الانضمام' : 'إنشاء الحساب'}</Text>
+    </TouchableOpacity>
+    ```
+  * **الخطوة ز:** إضافة التنسيقات (Styles) المناسبة لـ Stylesheet:
+    ```javascript
+    // التنسيقات الخاصة بالشروط والـ Modal
+    termsContainer: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      marginHorizontal: 25,
+      marginTop: 20,
+      gap: 10
+    },
+    checkboxWrapper: {
+      padding: 5
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderColor: '#4f46e5',
+      borderRadius: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#fff'
+    },
+    checkboxChecked: {
+      backgroundColor: '#4f46e5'
+    },
+    termsText: {
+      fontSize: 13,
+      color: '#64748b',
+      fontWeight: '600',
+      textAlign: 'right'
+    },
+    termsLink: {
+      color: '#4f46e5',
+      fontWeight: '800',
+      textDecorationLine: 'underline'
+    },
+    submitBtnDisabled: {
+      backgroundColor: '#94a3b8',
+      elevation: 0,
+      shadowOpacity: 0
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(15, 23, 42, 0.6)', // خلفية ضبابية داكنة وعصرية
+      justifyContent: 'flex-end'
+    },
+    modalContent: {
+      backgroundColor: '#fff',
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      height: '75%',
+      padding: 25,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -10 },
+      shadowOpacity: 0.1,
+      shadowRadius: 20,
+      elevation: 10
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: '#f1f5f9',
+      paddingBottom: 15,
+      marginBottom: 15
+    },
+    closeModalBtn: {
+      padding: 5,
+      backgroundColor: '#f1f5f9',
+      borderRadius: 10
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#0f172a'
+    },
+    termsScroll: {
+      flex: 1
+    },
+    termsIntro: {
+      fontSize: 14,
+      color: '#64748b',
+      textAlign: 'right',
+      lineHeight: 22,
+      marginBottom: 15,
+      fontWeight: '600'
+    },
+    termHeading: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: '#0f172a',
+      marginTop: 15,
+      marginBottom: 5,
+      textAlign: 'right'
+    },
+    termBody: {
+      fontSize: 13,
+      color: '#475569',
+      lineHeight: 20,
+      textAlign: 'right',
+      fontWeight: '600',
+      backgroundColor: '#f8fafc',
+      padding: 10,
+      borderRadius: 12
+    },
+    modalAcceptBtn: {
+      backgroundColor: '#4f46e5',
+      height: 55,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 20,
+      elevation: 3
+    },
+    modalAcceptBtnText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '800'
+    }
+    ```
 
 ---
 

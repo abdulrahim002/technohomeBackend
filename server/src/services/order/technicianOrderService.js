@@ -5,12 +5,31 @@ const OrderStateMachine = require('../orderStateMachine');
 const notificationService = require('../notificationService');
 const transactionService = require('../transactionService');
 const schedulingValidator = require('./schedulingValidator');
+const { getIO } = require('../socketService');
 
 class TechnicianOrderService {
+  // دالة حساب المسافة الجغرافية بصيغة Haversine
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return undefined;
+    const R = 6371; // نصف قطر الأرض بالكيلومترات
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   /**
    * جلب الطلبات النشطة للفني
    */
   async getTechnicianActiveJobs(techId) {
+    const techUser = await User.findById(techId).select('location');
+    const techLat = techUser?.location?.coordinates?.[1];
+    const techLon = techUser?.location?.coordinates?.[0];
+
     const requests = await ServiceRequest.find({ 
       technician: techId, 
       status: { $in: ['pending', 'accepted', 'on_the_way', 'arrived', 'in_progress'] } 
@@ -21,8 +40,15 @@ class TechnicianOrderService {
     .sort({ scheduledDate: 1 })
     .lean();
 
-    // Privacy Filter: إخفاء بيانات العميل إذا لم يتم القبول
+      // Privacy Filter: إخفاء بيانات العميل وتوفير المسافة فقط إذا لم يتم القبول
     return requests.map(req => {
+      // حساب المسافة في كل الحالات
+      if (req.serviceAddress?.location?.coordinates && techLat && techLon) {
+        const clientLon = req.serviceAddress.location.coordinates[0];
+        const clientLat = req.serviceAddress.location.coordinates[1];
+        req.distance = this.calculateDistance(techLat, techLon, clientLat, clientLon);
+      }
+
       if (req.status === 'pending') {
         if (req.customer) req.customer.phone = 'مخفي حتى القبول';
         if (req.serviceAddress) {
@@ -55,6 +81,10 @@ class TechnicianOrderService {
    * جلب تفاصيل الطلب للفني (يتحقق من الملكية)
    */
   async getTechnicianJobDetails(requestId, techId) {
+    const techUser = await User.findById(techId).select('location');
+    const techLat = techUser?.location?.coordinates?.[1];
+    const techLon = techUser?.location?.coordinates?.[0];
+
     const request = await ServiceRequest.findOne({ _id: requestId, technician: techId })
       .populate('customer', 'firstName lastName phone')
       .populate('applianceType', 'nameAr')
@@ -62,6 +92,13 @@ class TechnicianOrderService {
       .lean();
 
     if (!request) throw { status: 404, message: 'المهمة غير موجودة أو لم تعد مسندة إليك' };
+
+    // حساب المسافة
+    if (request.serviceAddress?.location?.coordinates && techLat && techLon) {
+      const clientLon = request.serviceAddress.location.coordinates[0];
+      const clientLat = request.serviceAddress.location.coordinates[1];
+      request.distance = this.calculateDistance(techLat, techLon, clientLat, clientLon);
+    }
 
     // Privacy Filter
     if (request.status === 'pending') {
@@ -124,6 +161,22 @@ class TechnicianOrderService {
       type: 'order',
       relatedId: request._id
     });
+
+    // إرسال Socket Event للعميل لتحديث حالة الطلب فوراً
+    try {
+      const io = getIO();
+      io.to(request.customer.toString()).emit('requestStatusUpdated', {
+        requestId: request._id,
+        status: 'accepted'
+      });
+      // إرسال OTP تلقائياً لجهاز الفني عبر Socket
+      io.to(techId.toString()).emit('otpReceived', {
+        requestId: request._id,
+        otp: closingOTP
+      });
+    } catch (e) {
+      console.error('[Socket] Failed to emit on accept:', e.message);
+    }
 
     // -----------------------------------------------------
     // الخطوة السحرية: Auto-Reject للمواعيد المتعارضة (Conflict Resolution)
@@ -271,6 +324,17 @@ class TechnicianOrderService {
         type: 'order',
         relatedId: request._id
       });
+    }
+
+    // إرسال Socket Event للعميل لتحديث حالة الطلب فوراً في الشاشة
+    try {
+      const io = getIo();
+      io.to(request.customer.toString()).emit('requestStatusUpdated', {
+        requestId: request._id,
+        status
+      });
+    } catch (e) {
+      console.error('[Socket] Failed to emit status update:', e.message);
     }
 
     return request;

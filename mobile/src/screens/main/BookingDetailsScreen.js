@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -36,6 +36,7 @@ import JobStepper from '../../components/main/JobStepper';
 import RatingModal from '../../components/main/RatingModal';
 import { UPLOADS_URL } from '../../config/constants';
 import api from '../../api/api';
+import { onSocketEvent, offSocketEvent } from '../../services/SocketService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -56,6 +57,7 @@ export default function BookingDetailsScreen() {
     request,
     loading,
     actionLoading,
+    refresh,
     cancelBooking,
     deleteRequest,
     callPerson,
@@ -70,6 +72,22 @@ export default function BookingDetailsScreen() {
       setRatingModalVisible(false);
     }
   };
+
+  const getFullImageUri = (uri) => {
+    if (!uri) return null;
+    return uri.startsWith('http') ? uri : `${UPLOADS_URL}${uri.replace(/^\/+/, '')}`;
+  };
+
+  // تحديث حالة الطلب تلقائياً عبر Socket عندما يغير الفني الحالة
+  useEffect(() => {
+    const handleStatusUpdate = (data) => {
+      if (String(data.requestId) === String(requestId)) {
+        refresh();
+      }
+    };
+    onSocketEvent('requestStatusUpdated', handleStatusUpdate);
+    return () => offSocketEvent('requestStatusUpdated', handleStatusUpdate);
+  }, [requestId, refresh]);
 
   const handleReportTechnician = () => {
     Alert.alert(
@@ -144,6 +162,7 @@ export default function BookingDetailsScreen() {
   );
 
   const isDiagnosedOnly = request.status === 'diagnosed_only';
+  const isRejectedOrCancelled = request.status === 'rejected' || request.status === 'cancelled';
   const canCancel = request.status === 'pending';
   const isCompleted = request.status === 'completed';
   const canCall = ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(request.status);
@@ -164,10 +183,10 @@ export default function BookingDetailsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
         
-        {/* Progress Stepper (If assigned) */}
+        {/* 1. مخطط تتبع الحالة (فقط للطلبات المؤكدة مع فني) */}
         {!isDiagnosedOnly && <JobStepper status={request.status} />}
 
-        {/* === COMPLETED: Rating Section === */}
+        {/* === 2. عند إتمام الطلب: بنر التقييم === */}
         {isCompleted && (
           <View style={styles.completedBanner}>
             <View style={styles.completedIconRow}>
@@ -204,13 +223,7 @@ export default function BookingDetailsScreen() {
           </View>
         )}
 
-        {/* Diagnosis Results */}
-        <DiagnosisCard 
-          diagnosis={request.aiDiagnosis?.diagnosis} 
-          steps={request.aiDiagnosis?.steps} 
-        />
-
-        {/* Technician Info (If assigned) */}
+        {/* 3. كرت الفني والاتصال والرمز السري (إذا تم التعيين والطلب نشط) */}
         {request.technician && (
           <View style={styles.techCard}>
              <View style={styles.techHeader}>
@@ -223,7 +236,7 @@ export default function BookingDetailsScreen() {
                 </View>
                 <View style={styles.techAvatar}>
                    {request.technician.profileImage ? (
-                      <Image source={{ uri: request.technician.profileImage }} style={styles.avatarImg} />
+                      <Image source={{ uri: getFullImageUri(request.technician.profileImage) }} style={styles.avatarImg} />
                    ) : (
                       <UserIcon size={30} color="#CBD5E1" />
                    )}
@@ -285,7 +298,24 @@ export default function BookingDetailsScreen() {
           </View>
         )}
 
-        {/* Evidence Images */}
+        {/* 4. كرت بيانات الجهاز ووصف المشكلة الأساسي (تظهر دائماً في الأعلى كمدخل أساسي) */}
+        <Text style={styles.sectionTitle}>تفاصيل الطلب</Text>
+        <ServiceInfoCard 
+          applianceType={request.applianceType}
+          brand={request.brand}
+          problemDescription={request.problemDescription}
+        />
+
+        {/* 5. كرت التشخيص الذكي المقترح (يظهر مباشرة تحت تفاصيل المشكلة لربطه بها منطقياً) */}
+        {request.aiDiagnosis?.diagnosis && (
+          <DiagnosisCard 
+            title={request.diagnosisType === 'ai' ? 'نتائج التشخيص الذكي' : 'تفاصيل التشخيص'}
+            diagnosis={request.aiDiagnosis?.diagnosis} 
+            steps={request.aiDiagnosis?.steps} 
+          />
+        )}
+
+        {/* 6. الصور المرفقة */}
         {request.images && request.images.length > 0 && (
           <View style={styles.imageSection}>
              <Text style={styles.sectionTitle}>الصور المرفقة</Text>
@@ -310,33 +340,29 @@ export default function BookingDetailsScreen() {
           </View>
         )}
 
-        {/* Device & Problem Info (Shared Card) */}
-        <Text style={styles.sectionTitle}>تفاصيل الطلب</Text>
-        <ServiceInfoCard 
-          applianceType={request.applianceType}
-          brand={request.brand}
-          problemDescription={request.problemDescription}
-        />
+        {/* 7. موقع تقديم الخدمة (يتم إخفاؤه تماماً في حالة التشخيص فقط، ويظهر فقط عند تأكيد حجز الفني) */}
+        {!isDiagnosedOnly && (
+          <>
+            <Text style={styles.sectionTitle}>موقع تقديم الخدمة</Text>
+            <View style={styles.infoCard}>
+               <View style={styles.infoRow}>
+                  <Text style={styles.infoValue}>{request.serviceAddress?.cityId?.nameAr || 'غير محدد'}</Text>
+                  <Text style={styles.infoLabel}>المدينة</Text>
+               </View>
+               <View style={styles.infoRow}>
+                  <Text style={styles.infoValue}>{request.serviceAddress?.street || 'العنوان غير محدد'}</Text>
+                  <Text style={styles.infoLabel}>العنوان</Text>
+               </View>
+               
+               <TouchableOpacity style={styles.mapBtn} onPress={openInMaps}>
+                  <NavigationIcon size={18} color="#4F46E5" style={{ marginLeft: 8 }} />
+                  <Text style={styles.mapBtnText}>رؤية الموقع على الخريطة</Text>
+               </TouchableOpacity>
+            </View>
+          </>
+        )}
 
-        {/* Location Preview */}
-        <Text style={styles.sectionTitle}>موقع تقديم الخدمة</Text>
-        <View style={styles.infoCard}>
-           <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{request.serviceAddress?.cityId?.nameAr || 'غير محدد'}</Text>
-              <Text style={styles.infoLabel}>المدينة</Text>
-           </View>
-           <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{request.serviceAddress?.street || 'العنوان غير محدد'}</Text>
-              <Text style={styles.infoLabel}>العنوان</Text>
-           </View>
-           
-           <TouchableOpacity style={styles.mapBtn} onPress={openInMaps}>
-              <NavigationIcon size={18} color="#4F46E5" style={{ marginLeft: 8 }} />
-              <Text style={styles.mapBtnText}>رؤية الموقع على الخريطة</Text>
-           </TouchableOpacity>
-        </View>
-
-        {/* Action for Diagnosed Only */}
+        {/* 8. زر طلب فني صيانة (فقط لحالة التشخيص) */}
         {isDiagnosedOnly && (
            <TouchableOpacity 
              style={styles.bookNowBtn}
@@ -349,6 +375,26 @@ export default function BookingDetailsScreen() {
               <Zap size={20} color="#FFF" />
               <Text style={styles.bookNowText}>اطلب فني للإصلاح الآن</Text>
            </TouchableOpacity>
+        )}
+
+        {/* 9. زر اختيار فني آخر في حال الرفض أو الإلغاء */}
+        {isRejectedOrCancelled && (
+           <View style={{ marginTop: 10 }}>
+             <Text style={{ color: '#EF4444', textAlign: 'center', marginBottom: 15, fontSize: 13, fontWeight: '800' }}>
+               {request.status === 'rejected' ? 'عذراً، الفني اعتذر عن الطلب لتضارب في المواعيد أو لسبب آخر.' : 'تم إلغاء هذا الطلب مسبقاً.'}
+             </Text>
+             <TouchableOpacity 
+               style={[styles.bookNowBtn, { backgroundColor: '#F59E0B' }]}
+               onPress={() => navigation.navigate('TechnicianList', {
+                 requestId: request._id,
+                 diagnosisData: { aiDiagnosis: request.aiDiagnosis },
+                 bookingData: request
+               })}
+             >
+                <Zap size={20} color="#FFF" />
+                <Text style={styles.bookNowText}>اختر فنياً آخر للإصلاح</Text>
+             </TouchableOpacity>
+           </View>
         )}
 
         <View style={{ height: 40 }} />
