@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -20,12 +20,17 @@ import {
   ShieldCheck,
   Wallet,
   Award,
-  Flame
+  Flame,
+  Bell
 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTechnician } from '../../../hooks/useTechnician';
 import StatCard from '../../../components/common/StatCard';
 import { UPLOADS_URL } from '../../../config/constants';
+import IconWithBadge from '../../../components/common/IconWithBadge';
+import { getMyNotifications } from '../../../api/notificationService';
+import { onSocketEvent, offSocketEvent } from '../../../services/SocketService';
+
 
 /**
  * TechnicianDashboard - "Dumb" Screen component.
@@ -46,12 +51,36 @@ const TechnicianDashboard = () => {
     refresh
   } = useTechnician();
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // جلب الإشعارات وحساب غير المقروء منها للفني
+  const fetchUnreadCount = async () => {
+    const res = await getMyNotifications();
+    if (res.success) {
+      const count = res.notifications.filter(n => !n.isRead).length;
+      setUnreadCount(count);
+    }
+  };
+
   // تحديث البيانات في كل مرة تظهر فيها الشاشة
   useFocusEffect(
     React.useCallback(() => {
       refresh();
+      fetchUnreadCount();
     }, [refresh])
   );
+
+  // الاستماع للإشعارات الجديدة عبر الـ Socket لزيادة العداد فوراً (Real-time)
+  useEffect(() => {
+    const handleNewNotification = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+
+    onSocketEvent('newNotification', handleNewNotification);
+    return () => {
+      offSocketEvent('newNotification', handleNewNotification);
+    };
+  }, []);
 
   const consecutive = stats.consecutiveCompletedJobs || 0;
   const remainingForBonus = 5 - (consecutive % 5);
@@ -66,8 +95,22 @@ const TechnicianDashboard = () => {
       {/* Top Header Section */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <TouchableOpacity 
+            activeOpacity={0.7}
+            style={{ marginRight: 12, padding: 4 }}
+            onPress={() => navigation.navigate('NotificationCenter')}
+          >
+            <IconWithBadge 
+              IconComponent={Bell} 
+              color="#4F46E5" 
+              size={22} 
+              count={unreadCount} 
+            />
+          </TouchableOpacity>
           <Text style={styles.brandText}>TechnoHome</Text>
         </View>
+
+
 
         <View style={styles.headerRight}>
           <View style={styles.headerTexts}>

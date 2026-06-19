@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,10 +10,14 @@ import {
   Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, User } from 'lucide-react-native';
+import { LayoutGrid, Zap, Search, Clock, ShieldCheck, ChevronRight, User, Bell } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useBookings } from '../../hooks/useBookings';
 import { UPLOADS_URL } from '../../config/constants';
+import IconWithBadge from '../../components/common/IconWithBadge';
+import { getMyNotifications } from '../../api/notificationService';
+import { onSocketEvent, offSocketEvent } from '../../services/SocketService';
+import { useFocusEffect } from '@react-navigation/native';
 
 /**
  * HomeScreen - "Dashboard Only" Mode
@@ -22,6 +26,35 @@ import { UPLOADS_URL } from '../../config/constants';
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { requests, totalCount } = useBookings();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // جلب الإشعارات وحساب غير المقروء منها
+  const fetchUnreadCount = async () => {
+    const res = await getMyNotifications();
+    if (res.success) {
+      const count = res.notifications.filter(n => !n.isRead).length;
+      setUnreadCount(count);
+    }
+  };
+
+  // جلب العداد عند إدخال التركيز على الشاشة لضمان المزامنة
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUnreadCount();
+    }, [])
+  );
+
+  // الاستماع للإشعارات الجديدة عبر الـ Socket لزيادة العداد فوراً (Real-time)
+  useEffect(() => {
+    const handleNewNotification = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+
+    onSocketEvent('newNotification', handleNewNotification);
+    return () => {
+      offSocketEvent('newNotification', handleNewNotification);
+    };
+  }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -40,8 +73,22 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.serviceHeader}>
         <View style={styles.mainRow}>
           <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              style={{ marginRight: 12, padding: 4 }}
+              onPress={() => navigation.navigate('NotificationCenter')}
+            >
+              <IconWithBadge 
+                IconComponent={Bell} 
+                color="#4F46E5" 
+                size={22} 
+                count={unreadCount} 
+              />
+            </TouchableOpacity>
             <Text style={styles.brandText}>TechnoHome</Text>
           </View>
+
+
 
           <View style={styles.headerRight}>
             <View style={styles.headerTexts}>

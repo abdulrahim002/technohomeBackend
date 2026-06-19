@@ -22,9 +22,11 @@ const errorCodeRoutes = require('./routes/errorCode.routes');
 const userRoutes = require('./routes/user.routes');
 const reportRoutes = require('./routes/report.routes');
 const chatRoutes = require('./routes/chat.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 // Import error handler
 const errorHandler = require('./middlewares/errorHandler');
+
 
 const app = express();
 const http = require('http');
@@ -86,6 +88,8 @@ app.use('/api/error-codes', errorCodeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 // 404 handler
 app.use((req, res) => {

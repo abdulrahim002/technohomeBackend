@@ -109,17 +109,30 @@ export default function AppNavigator() {
         case 'order_update':
           if (user.role === 'technician') {
             navigationRef.navigate('TechnicianJobDetails', {
-              orderId: data.orderId
+              requestId: data.orderId
             });
           } else {
             navigationRef.navigate('BookingDetails', {
-              bookingId: data.orderId
+              order: { _id: data.orderId }
+            });
+          }
+          break;
+
+        case 'order':
+        case 'expired_request':
+          if (user.role === 'technician') {
+            navigationRef.navigate('TechnicianJobDetails', {
+              requestId: data.relatedId
+            });
+          } else {
+            navigationRef.navigate('BookingDetails', {
+              order: { _id: data.relatedId }
             });
           }
           break;
 
         default:
-          console.log(' [DEBUG] Informational notification, no navigation needed');
+          navigationRef.navigate('NotificationCenter');
           break;
       }
     });
