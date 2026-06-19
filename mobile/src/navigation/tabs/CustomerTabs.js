@@ -127,6 +127,12 @@ const TabNavigator = () => {
             />
           )
         }}
+        listeners={{
+          tabPress: () => {
+            // تصفير العلامة الحمراء فور الضغط على التبويب
+            setActiveOrders(0);
+          },
+        }}
       />
       <Tab.Screen 
         name="AITab" 
@@ -149,6 +155,12 @@ const TabNavigator = () => {
               count={unreadChats} 
             />
           )
+        }}
+        listeners={{
+          tabPress: () => {
+            // تصفير عدد المحادثات غير المقروءة فور الضغط على التبويب
+            setUnreadChats(0);
+          },
         }}
       />
       <Tab.Screen 

@@ -122,6 +122,12 @@ const TabNavigator = () => {
             />
           )
         }}
+        listeners={{
+          tabPress: () => {
+            // تصفير شارة مهامي فور الضغط على التبويب
+            setPendingJobs(0);
+          },
+        }}
       />
       <Tab.Screen 
         name="ChatsTab" 
@@ -136,6 +142,12 @@ const TabNavigator = () => {
               count={unreadChats} 
             />
           )
+        }}
+        listeners={{
+          tabPress: () => {
+            // تصفير شارة المحادثات فور الضغط على التبويب
+            setUnreadChats(0);
+          },
         }}
       />
       <Tab.Screen 
