@@ -256,13 +256,17 @@ const TechnicianJobDetails = () => {
         <ServiceInfoCard 
           applianceType={request.applianceType}
           brand={request.brand}
-          problemDescription={request.problemDescription}
+          problemDescription={
+            (request.problemDescription === request.aiDiagnosis?.diagnosis || request.problemDescription === 'تشخيص تلقائي بالصوت')
+              ? `طلب فحص ${request.applianceType?.nameAr || ''} عبر التسجيل الصوتي`
+              : request.problemDescription
+          }
         />
 
-        {/* AI Diagnosis Result (Show after accepting the job only if it was an AI diagnosis) */}
-        {request.status !== 'pending' && request.aiDiagnosis?.diagnosis && (
+        {/* AI Diagnosis Result (Show diagnosis report to technician so they understand before going) */}
+        {request.aiDiagnosis?.diagnosis && (
           <DiagnosisCard 
-            title={request.diagnosisType === 'ai' ? 'نتائج التشخيص الذكي' : 'تفاصيل التشخيص'}
+            title={request.diagnosisType === 'ai' ? 'نتائج التشخيص الذكي للذكاء الاصطناعي' : 'تفاصيل التشخيص'}
             diagnosis={request.aiDiagnosis?.diagnosis} 
             steps={request.aiDiagnosis?.steps} 
           />

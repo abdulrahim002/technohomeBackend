@@ -9,6 +9,8 @@ const locationSyncService = require('../services/locationSyncService');
 const transactionService = require('../services/transactionService');
 const reportExportService = require('../services/reportExportService');
 const notificationService = require('../services/notificationService');
+const fs = require('fs');   // [+] لحذف الشعارات القديمة من القرص عند التحديث
+const path = require('path'); // [+] لبناء مسارات الملفات المطلقة
 
 // ==========================================
 // 1. إدارة المستخدمين والفنيين
@@ -127,14 +129,22 @@ exports.chargeTechnicianWallet = async (req, res, next) => {
 exports.createApplianceType = async (req, res, next) => {
   try {
     const { nameAr, nameEn } = req.body;
-    
-    // التحقق من عدم التكرار (بسيط)
+
+    // التحقق من عدم التكرار
     const existing = await ApplianceType.findOne({ $or: [{ nameAr }, { nameEn }] });
     if (existing) {
       return res.status(400).json({ status: 'fail', message: 'هذا الجهاز (بالعربي أو الإنجليزي) مسجل مسبقاً' });
     }
 
-    const type = await ApplianceType.create({ name: `${nameAr}-${nameEn}`, nameAr, nameEn });
+    // [+] استخراج مسار الشعار النسبي إن تم رفع ملف
+    const logoUrl = req.file ? `/uploads/logos/${req.file.filename}` : null;
+
+    const type = await ApplianceType.create({
+      name: `${nameAr}-${nameEn}`,
+      nameAr,
+      nameEn,
+      logoUrl // [+]
+    });
     res.status(201).json({ status: 'success', data: { applianceType: type } });
   } catch (error) { next(error); }
 };
@@ -148,7 +158,25 @@ exports.getAllApplianceTypes = async (req, res, next) => {
 
 exports.updateApplianceType = async (req, res, next) => {
   try {
-    const type = await ApplianceType.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // [+] بناء كائن التحديث
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      // [+] حذف الشعار القديم من القرص إن وُجد (تنظيف آمن)
+      const existing = await ApplianceType.findById(req.params.id).select('logoUrl').lean();
+      if (existing?.logoUrl) {
+        const oldPath = path.join(__dirname, '../../', existing.logoUrl);
+        fs.unlink(oldPath, (err) => {
+          // نتجاهل الخطأ إن لم يكن الملف موجوداً (defensive)
+          if (err && err.code !== 'ENOENT') {
+            console.warn('[uploadLogo] فشل حذف الشعار القديم:', err.message);
+          }
+        });
+      }
+      updateData.logoUrl = `/uploads/logos/${req.file.filename}`; // [+]
+    }
+
+    const type = await ApplianceType.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.status(200).json({ status: 'success', data: { applianceType: type } });
   } catch (error) { next(error); }
 };
@@ -174,11 +202,15 @@ exports.createBrand = async (req, res, next) => {
       return res.status(400).json({ status: 'fail', message: 'هذه الماركة مسجلة مسبقاً في النظام' });
     }
 
-    const brand = await Brand.create({ 
-      name: `${nameAr}-${nameEn}`, 
-      nameAr, 
-      nameEn, 
-      applianceTypes // مصفوفة من الـ IDs
+    // [+] استخراج مسار الشعار النسبي إن تم رفع ملف
+    const logoUrl = req.file ? `/uploads/logos/${req.file.filename}` : null;
+
+    const brand = await Brand.create({
+      name: `${nameAr}-${nameEn}`,
+      nameAr,
+      nameEn,
+      applianceTypes, // مصفوفة من الـ IDs
+      logoUrl         // [+]
     });
     res.status(201).json({ status: 'success', data: { brand } });
   } catch (error) { next(error); }
@@ -196,7 +228,24 @@ exports.getAllBrands = async (req, res, next) => {
 
 exports.updateBrand = async (req, res, next) => {
   try {
-    const brand = await Brand.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    // [+] بناء كائن التحديث
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      // [+] حذف الشعار القديم من القرص إن وُجد (تنظيف آمن)
+      const existingBrand = await Brand.findById(req.params.id).select('logoUrl').lean();
+      if (existingBrand?.logoUrl) {
+        const oldPath = path.join(__dirname, '../../', existingBrand.logoUrl);
+        fs.unlink(oldPath, (err) => {
+          if (err && err.code !== 'ENOENT') {
+            console.warn('[uploadLogo] فشل حذف شعار الماركة القديم:', err.message);
+          }
+        });
+      }
+      updateData.logoUrl = `/uploads/logos/${req.file.filename}`; // [+]
+    }
+
+    const brand = await Brand.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();
     res.status(200).json({ status: 'success', data: { brand } });
   } catch (error) { next(error); }
 };

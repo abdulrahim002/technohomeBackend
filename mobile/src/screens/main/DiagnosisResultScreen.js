@@ -10,8 +10,10 @@ export default function DiagnosisResultScreen({ route, navigation }) {
 
   const handleSaveOnly = async () => {
     setSavingOnly(true);
+    const description = bookingData.problemDescription || aiDiagnosis?.diagnosis || 'تشخيص تلقائي بالصوت';
     const result = await createServiceRequest({
       ...bookingData,
+      problemDescription: description,
       id: requestId,
       preComputedDiagnosis: aiDiagnosis,
     }, bookingData.imagesUris || []);
@@ -27,10 +29,14 @@ export default function DiagnosisResultScreen({ route, navigation }) {
   };
 
   const handleBookTechnician = () => {
+    const description = bookingData.problemDescription || aiDiagnosis?.diagnosis || 'تشخيص تلقائي بالصوت';
     navigation.navigate('TechnicianList', {
       requestId,
       diagnosisData: { aiDiagnosis },
-      bookingData
+      bookingData: {
+        ...bookingData,
+        problemDescription: description
+      }
     });
   };
 

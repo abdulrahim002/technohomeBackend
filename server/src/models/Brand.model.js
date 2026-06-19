@@ -30,6 +30,11 @@ const BrandSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // [+] شعار الماركة (اختياري) — المسار النسبي للملف المخزن محلياً
+  logoUrl: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

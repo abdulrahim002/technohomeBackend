@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const { verifyToken, isAuthenticated, isAdmin } = require('../middlewares/auth.middleware');
+const { uploadLogo } = require('../middlewares/upload.middleware'); // [+] middleware الشعارات
 
 /**
  * Admin Protected Routes
@@ -26,16 +27,16 @@ router.get('/statistics', adminController.getStatistics);
 router.get('/insights/top-technicians', adminController.getTopTechnicians);
 router.get('/export/wallet/:techId', adminController.exportTechnicianWallet);
 
-// إدارة أنواع الأجهزة
+// إدارة أنواع الأجهزة — [+] uploadLogo.single('logo') لقبول ملف الشعار
 router.get('/appliance-types', adminController.getAllApplianceTypes);
-router.post('/appliance-types', adminController.createApplianceType);
-router.patch('/appliance-types/:id', adminController.updateApplianceType);
+router.post('/appliance-types', uploadLogo.single('logo'), adminController.createApplianceType);
+router.patch('/appliance-types/:id', uploadLogo.single('logo'), adminController.updateApplianceType);
 router.delete('/appliance-types/:id', adminController.deleteApplianceType);
 
-// إدارة الماركات (Brands)
+// إدارة الماركات (Brands) — [+] uploadLogo.single('logo') لقبول ملف الشعار
 router.get('/brands', adminController.getAllBrands);
-router.post('/brands', adminController.createBrand);
-router.patch('/brands/:id', adminController.updateBrand);
+router.post('/brands', uploadLogo.single('logo'), adminController.createBrand);
+router.patch('/brands/:id', uploadLogo.single('logo'), adminController.updateBrand);
 router.delete('/brands/:id', adminController.deleteBrand);
 
 // إدارة المدن (Cities)

@@ -303,7 +303,11 @@ export default function BookingDetailsScreen() {
         <ServiceInfoCard 
           applianceType={request.applianceType}
           brand={request.brand}
-          problemDescription={request.problemDescription}
+          problemDescription={
+            (request.problemDescription === request.aiDiagnosis?.diagnosis || request.problemDescription === 'تشخيص تلقائي بالصوت')
+              ? `طلب فحص ${request.applianceType?.nameAr || ''} عبر التسجيل الصوتي`
+              : request.problemDescription
+          }
         />
 
         {/* 5. كرت التشخيص الذكي المقترح (يظهر مباشرة تحت تفاصيل المشكلة لربطه بها منطقياً) */}

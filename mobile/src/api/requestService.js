@@ -6,7 +6,36 @@ import { Platform } from 'react-native';
  */
 export const analyzeProblem = async (data) => {
   try {
-    const response = await api.post('/service-requests/analyze', data, { timeout: 25000 });
+    let payload = data;
+    let headers = {};
+
+    if (data.audioUri) {
+      const formData = new FormData();
+      formData.append('applianceType', data.applianceType);
+      formData.append('brand', data.brand);
+      if (data.problemDescription) {
+        formData.append('problemDescription', data.problemDescription);
+      }
+
+      const filename = data.audioUri.split('/').pop() || 'voice.m4a';
+      const match = /\.(\w+)$/.exec(filename);
+      // توحيد الـ mimeType ليكون audio/m4a أو الامتداد الصحيح
+      const ext = match ? match[1] : 'm4a';
+      const type = ext === 'm4a' ? 'audio/x-m4a' : `audio/${ext}`;
+
+      formData.append('audio', {
+        uri: Platform.OS === 'ios' ? data.audioUri.replace('file://', '') : data.audioUri,
+        name: filename,
+        type: type,
+      });
+      payload = formData;
+      headers = { 'Content-Type': 'multipart/form-data' };
+    }
+
+    const response = await api.post('/service-requests/analyze', payload, { 
+      headers,
+      timeout: 30000 
+    });
     return { success: true, data: response.data.data, timedOut: response.data.timedOut };
   } catch (error) {
     console.error('[API] analyzeProblem error:', error.response?.data || error.message);

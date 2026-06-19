@@ -22,32 +22,53 @@ class GeminiService {
    * البنية دائماً: { aiDiagnosis: { diagnosis, steps } }
    */
   async analyzeProblem(data) {
+    const fs = require('fs');
     const applianceType = data.applianceType;
     const brand = data.brand;
     const problemDescription = data.description || data.problemDescription;
+    const audioFile = data.audioFile;
 
-    if (!applianceType || !brand || !problemDescription) {
-      throw new Error('جميع البيانات (الجهاز، الماركة، الوصف) مطلوبة');
+    if (!applianceType || !brand || (!problemDescription && !audioFile)) {
+      throw new Error('يجب تحديد نوع الجهاز والماركة ووصف العطل (نص أو صوت)');
     }
 
     const prompt = `
-      أنت خبير صيانة أجهزة منزلية. 
-      قم بتشخيص المشكلة التالية بدقة واحترافية:
+      أنت خبير صيانة أجهزة منزلية ذكي. 
+      مهمتك: تشخيص المشكلة للجهاز التالي بدقة واحترافية بناءً على الوصف النصي المرفق و/أو الملف الصوتي المرفق (الذي يحتوي على شرح صوتي للمشكلة من العميل).
+      
       الجهاز: ${applianceType}
       الماركة: ${brand}
-      وصف المشكلة: ${problemDescription}
+      ${problemDescription ? `وصف المشكلة النصي: ${problemDescription}` : ''}
 
-      يجب أن يكون الرد بتنسيق JSON حصراً كالتالي:
+      قم بالاستماع للملف الصوتي المرفق بدقة (إن وُجد) واكتشف المشكلة وشخصها بالكامل.
+      يجب أن تكون إجابتك باللغة العربية الفصحى وبتنسيق JSON حصراً كالتالي:
       {
         "diagnosis": "شرح مفصل ومبسط للسبب المحتمل للمشكلة باللغة العربية",
         "steps": [
-          "تأكد من ...",
-          "قم بفحص ...",
+          "خطوة أولى للحل أو التحقق...",
+          "خطوة ثانية للحل أو التحقق...",
           "..."
         ]
       }
-      ملاحظة: لا تضف أي نصوص أو علامات خارج الـ JSON.
+      تنبيه هام جداً: لا تضف أي نصوص أو علامات أو تعليقات خارج الـ JSON ولا تلف الكود بـ markdown.
     `;
+
+    // بناء مصفوفة أجزاء المدخلات لـ Gemini
+    const parts = [];
+    if (audioFile) {
+      try {
+        const audioBuffer = fs.readFileSync(audioFile.path);
+        parts.push({
+          inlineData: {
+            data: audioBuffer.toString('base64'),
+            mimeType: audioFile.mimetype || 'audio/mp3'
+          }
+        });
+      } catch (err) {
+        console.error('❌ Error reading audio file for Gemini:', err.message);
+      }
+    }
+    parts.push(prompt);
 
     for (const modelName of this.modelOptions) {
       try {
@@ -56,8 +77,8 @@ class GeminiService {
         const model = this.genAI.getGenerativeModel({ model: modelName });
         
         const result = await Promise.race([
-          model.generateContent(prompt),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('ModelTimeout')), 12000))
+          model.generateContent(parts),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('ModelTimeout')), 15000))
         ]);
 
         const response = await result.response;

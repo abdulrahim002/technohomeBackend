@@ -228,7 +228,7 @@ class OrderCreationService {
   /**
    * تشخيص فقط (بدون حفظ - للعرض الفوري قبل قرار الحجز)
    */
-  async analyzeOnly(data, userId) {
+  async analyzeOnly(data, userId, audioFile = null) {
     const { applianceType, brand, problemDescription } = data;
 
     let applianceName = applianceType;
@@ -262,7 +262,8 @@ class OrderCreationService {
         GeminiService.analyzeProblem({
           applianceType: applianceName,
           brand: brandName || 'غير محددة',
-          problemDescription
+          problemDescription,
+          audioFile
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('AI_TIMEOUT')), 20000))
       ]);

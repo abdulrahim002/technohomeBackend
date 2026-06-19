@@ -23,6 +23,11 @@ const ApplianceTypeSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // [+] شعار نوع الجهاز (اختياري) — المسار النسبي للملف المخزن محلياً
+  logoUrl: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

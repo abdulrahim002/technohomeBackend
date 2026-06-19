@@ -50,6 +50,16 @@ const TechnicianJobCard = ({ item, onPress, hasConflict }) => {
          <View style={styles.applianceInfo}>
             <Text style={styles.applianceName}>{item.applianceType?.nameAr || 'جهاز عام'}</Text>
             <Text style={styles.brandName}>{item.brand}</Text>
+            {item.problemDescription && (
+              <Text 
+                style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginTop: 6, textAlign: 'right' }}
+                numberOfLines={1}
+              >
+                {(item.problemDescription === item.aiDiagnosis?.diagnosis || item.problemDescription === 'تشخيص تلقائي بالصوت')
+                  ? `طلب فحص ${item.applianceType?.nameAr || ''} عبر التسجيل الصوتي`
+                  : item.problemDescription}
+              </Text>
+            )}
          </View>
          <View style={styles.iconContainer}>
             <Wrench size={24} color="#4F46E5" />

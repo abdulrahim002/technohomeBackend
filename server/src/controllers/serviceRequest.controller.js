@@ -97,8 +97,13 @@ exports.createServiceRequest = async (req, res, next) => {
  * تشخيص المشكلة فقط (بدون حجز - نظام السباق الذكي 20 ثانية)
  */
 exports.analyzeProblem = async (req, res, next) => {
+  const fs = require('fs');
   try {
-    const result = await orderCreationService.analyzeOnly(req.body, req.userId);
+    if (!req.body.problemDescription && !req.file) {
+      return res.status(400).json({ status: 'fail', message: 'يرجى كتابة وصف للمشكلة أو تسجيل صوتي' });
+    }
+
+    const result = await orderCreationService.analyzeOnly(req.body, req.userId, req.file);
     if (result.limitReached) {
       return res.status(402).json({ status: 'fail', message: result.message });
     }
@@ -106,6 +111,13 @@ exports.analyzeProblem = async (req, res, next) => {
   } catch (error) {
     if (error.status) return res.status(error.status).json({ status: 'fail', message: error.message });
     next(error);
+  } finally {
+    if (req.file && req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('❌ Failed to delete temp voice note:', err.message);
+        else console.log('🗑️ Temp voice note deleted successfully');
+      });
+    }
   }
 };
 

@@ -43,7 +43,7 @@ router.get('/lookups/cities', async (req, res) => {
 /**
  * --- Client Protected Routes ---
  */
-router.post('/analyze', verifyToken, isAuthenticated, isClient, serviceRequestController.analyzeProblem);
+router.post('/analyze', verifyToken, isAuthenticated, isClient, upload.uploadVoice.single('audio'), serviceRequestController.analyzeProblem);
 router.post('/upload-image', verifyToken, isAuthenticated, upload.single('image'), serviceRequestController.uploadImage);
 
 router.post('/', 

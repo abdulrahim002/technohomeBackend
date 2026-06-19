@@ -7,11 +7,15 @@ import {
   TouchableOpacity, 
   TextInput, 
   ActivityIndicator, 
-  Alert 
+  Alert,
+  Image,
+  FlatList,
+  Dimensions
 } from 'react-native';
 import { useLookups } from '../../hooks/useLookups';
 import { searchErrorCode } from '../../api/errorCodeService';
-import { Wrench, ShieldAlert, ChevronRight, Search, ChevronLeft } from 'lucide-react-native';
+import { Wrench, ShieldAlert, ChevronRight, Search, ChevronLeft, Cpu, Tag } from 'lucide-react-native';
+import { UPLOADS_URL } from '../../config/constants';
 
 /**
  * شاشة التشخيص اليدوي (Manual Diagnosis)
@@ -19,6 +23,18 @@ import { Wrench, ShieldAlert, ChevronRight, Search, ChevronLeft } from 'lucide-r
  * هذه الشاشة تتيح للمستخدم البحث عن حل لمشكلة معينة عن طريق تحديد نوع الجهاز، الماركة، وكود الخطأ. 
  *  
  */
+
+const buildLogoUrl = (logoUrl) => {
+  if (!logoUrl) return null;
+  if (logoUrl.startsWith('http')) return logoUrl;
+  const base = UPLOADS_URL.endsWith('/') ? UPLOADS_URL.slice(0, -1) : UPLOADS_URL;
+  const rel  = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`;
+  return `${base}${rel}`;
+};
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48 - 20) / 3; // 48 is horizontal padding (24 * 2), 20 is total gap (10 * 2)
+
 export default function ManualDiagnosisScreen({ navigation }) {
   const { appliances, brands, loading } = useLookups();
   const [searching, setSearching] = useState(false);
@@ -88,50 +104,98 @@ export default function ManualDiagnosisScreen({ navigation }) {
 
       {/* Step 1: Device Selection */}
       {step === 1 && (
-        <View style={styles.grid}>
-          {appliances.map(app => (
-            <TouchableOpacity 
-              key={app._id} 
-              style={styles.card}
-              onPress={() => {
-                setSelectedDevice(app);
-                setStep(2);
-              }}
-            >
-              <View style={styles.cardIcon}>
-                <Wrench size={32} color="#2563eb" />
-              </View>
-              <Text style={styles.cardName}>{app.nameAr}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <FlatList
+          data={appliances}
+          keyExtractor={item => item._id}
+          numColumns={3}
+          scrollEnabled={false}
+          columnWrapperStyle={styles.gridRow}
+          renderItem={({ item }) => {
+            const isSelected = selectedDevice?._id === item._id;
+            return (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedDevice(item);
+                  setStep(2);
+                }}
+                style={[styles.gridCard, isSelected && styles.gridCardActive]}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.cardLogoWrapper, isSelected && styles.cardLogoWrapperActive]}>
+                  {item.logoUrl ? (
+                    <Image
+                      source={{ uri: buildLogoUrl(item.logoUrl) }}
+                      style={styles.cardLogoImg}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Cpu
+                      size={28}
+                      color={isSelected ? '#4F46E5' : '#94A3B8'}
+                    />
+                  )}
+                </View>
+                <Text 
+                  style={[styles.cardText, isSelected && styles.cardTextActive]}
+                  numberOfLines={1}
+                >
+                  {item.nameAr}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
       )}
 
       {/* Step 2: Brand Selection */}
       {step === 2 && (
         <View>
-          <View style={styles.grid}>
-            {currentBrands.map(brand => (
-              <TouchableOpacity 
-                key={brand._id} 
-                style={styles.card}
-                onPress={() => {
-                  setSelectedBrand(brand);
-                  setStep(3);
-                }}
-              >
-                <View style={styles.cardIcon}>
-                  <ShieldAlert size={32} color="#2563eb" />
-                </View>
-                <Text style={styles.cardName}>{brand.nameAr}</Text>
-              </TouchableOpacity>
-            ))}
-            {currentBrands.length === 0 && (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>لا توجد ماركات مسجلة لهذا الجهاز حالياً</Text>
-              </View>
-            )}
-          </View>
+          <FlatList
+            data={currentBrands}
+            keyExtractor={item => item._id}
+            numColumns={3}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.gridRow}
+            renderItem={({ item }) => {
+              const isSelected = selectedBrand?._id === item._id;
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedBrand(item);
+                    setStep(3);
+                  }}
+                  style={[styles.gridCard, isSelected && styles.gridCardActive]}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.cardLogoWrapper, isSelected && styles.cardLogoWrapperActive]}>
+                    {item.logoUrl ? (
+                      <Image
+                        source={{ uri: buildLogoUrl(item.logoUrl) }}
+                        style={styles.cardLogoImg}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Tag
+                        size={28}
+                        color={isSelected ? '#4F46E5' : '#94A3B8'}
+                      />
+                    )}
+                  </View>
+                  <Text 
+                    style={[styles.cardText, isSelected && styles.cardTextActive]}
+                    numberOfLines={1}
+                  >
+                    {item.nameAr}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+          {currentBrands.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>لا توجد ماركات مسجلة لهذا الجهاز حالياً</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -220,20 +284,59 @@ const styles = StyleSheet.create({
   dot: { width: 24, height: 6, borderRadius: 3, backgroundColor: '#e2e8f0' },
   dotActive: { backgroundColor: '#4F46E5', width: 35 },
 
-  grid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 15 },
-  card: { 
-    width: '47%', 
-    backgroundColor: '#fff', 
-    borderRadius: 24, 
-    padding: 24, 
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10
+  gridRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'flex-start',
+    marginBottom: 10,
+    gap: 10,
   },
-  cardIcon: { width: 64, height: 64, backgroundColor: '#F1F5F9', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  cardName: { fontSize: 15, fontWeight: '800', color: '#334155', textAlign: 'center' },
+  gridCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridCardActive: {
+    backgroundColor: '#F5F7FF',
+    borderColor: '#4F46E5',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardLogoWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  cardLogoWrapperActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  cardLogoImg: {
+    width: 48,
+    height: 48,
+  },
+  cardText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    textAlign: 'center',
+    width: '100%',
+  },
+  cardTextActive: {
+    color: '#4F46E5',
+    fontWeight: '800',
+  },
   
   infoSummary: { backgroundColor: '#EEF2FF', padding: 12, borderRadius: 12, marginBottom: 20, alignItems: 'center' },
   summaryText: { color: '#4F46E5', fontSize: 14, fontWeight: '800' },

@@ -28,12 +28,22 @@ import {
 import axios from 'axios';
 
 import { Colors } from '../../constants/Colors';
-import { API_URL, UPLOADS_URL } from '../../config/constants';
+import { API_URL, UPLOADS_URL } from '../../config/constants'; // [+] UPLOADS_URL لبناء روابط الشعارات
 import { getCityNameAr } from '../../config/fixedData';
 import useAuthStore from '../../store/useAuthStore';
 import { useAuth } from '../../context/AuthContext';
 import { useLookups } from '../../hooks/useLookups';
 import ReliabilityBadge from '../../components/common/ReliabilityBadge';
+
+// [+] دالة مساعدة: بناء عنوان URL كامل لشعار الجهاز (يدعم المسارات النسبية والمطلقة)
+const buildLogoUrl = (logoUrl) => {
+  if (!logoUrl) return null;
+  if (logoUrl.startsWith('http')) return logoUrl;
+  const base = UPLOADS_URL.endsWith('/') ? UPLOADS_URL.slice(0, -1) : UPLOADS_URL;
+  const rel  = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`;
+  return `${base}${rel}`;
+};
+
 
 /**
  * TechnicianListScreen - شاشة اكتشاف الفنيين الموحدة
@@ -128,16 +138,26 @@ const TechnicianListScreen = ({ navigation, route }) => {
   }, [technicians, activeSort]);
 
 
-  // Filter Pill Component
-  const FilterPill = ({ label, active, onPress, icon: Icon }) => (
-    <TouchableOpacity 
-      style={[styles.pill, active && styles.pillActive]} 
+  // Filter Pill Component — [+] يدعم عرض شعار مصغر مع النص
+  const FilterPill = ({ label, active, onPress, icon: Icon, logoUrl }) => (
+    <TouchableOpacity
+      style={[styles.pill, active && styles.pillActive]}
       onPress={onPress}
     >
-      {Icon && <Icon size={14} color={active ? '#FFF' : '#64748B'} style={{ marginLeft: 6 }} />}
+      {/* [+] عرض الشعار إن وجد، وإلا الأيقونة، وإلا لا شيء */}
+      {logoUrl ? (
+        <Image
+          source={{ uri: buildLogoUrl(logoUrl) }}
+          style={styles.pillLogoImg}
+          resizeMode="contain"
+        />
+      ) : Icon ? (
+        <Icon size={14} color={active ? '#FFF' : '#64748B'} style={{ marginLeft: 6 }} />
+      ) : null}
       <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
+
 
   const renderItem = ({ item }) => (
     <View style={styles.techCard}>
@@ -242,12 +262,14 @@ const TechnicianListScreen = ({ navigation, route }) => {
           
           <View style={styles.filterDivider} />
           
-          {/* تخصصات */}
+          {/* تخصصات — [+] مع دعم الشعار */}
           {appliances.map(app => (
-            <FilterPill 
+            <FilterPill
               key={app._id || app.id}
               label={app.nameAr}
               active={activeSpecialty === (app._id || app.id)}
+              logoUrl={app.logoUrl || null} // [+]
+              icon={!app.logoUrl ? Wrench : undefined} // fallback: Wrench إن لا يوجد شعار
               onPress={() => {
                 const id = app._id || app.id;
                 setActiveSpecialty(activeSpecialty === id ? null : id);
@@ -358,6 +380,13 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
   pillText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
   pillTextActive: { color: '#FFF' },
+  // [+] صورة الشعار داخل زر الفلترة
+  pillLogoImg: {
+    width: 16,
+    height: 16,
+    marginLeft: 6,
+    borderRadius: 3,
+  },
   filterDivider: { width: 1, height: 20, backgroundColor: '#E2E8F0', marginHorizontal: 8, alignSelf: 'center' },
 
   listContainer: { paddingHorizontal: 25, paddingBottom: 40 },

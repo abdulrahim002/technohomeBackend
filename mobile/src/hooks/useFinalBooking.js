@@ -34,8 +34,10 @@ export const useFinalBooking = (route, navigation) => {
     const [hours] = selectedTime.split(':');
     scheduledDate.setHours(parseInt(hours) + (selectedTime.includes('PM') && parseInt(hours) !== 12 ? 12 : 0));
 
+    const description = bookingData.problemDescription || aiDiagnosis?.diagnosis || 'تشخيص تلقائي بالصوت';
     const result = await createServiceRequest({
       ...bookingData,
+      problemDescription: description,
       id: requestId,
       technicianId: technician._id || technician.techId,
       scheduledDate: scheduledDate.toISOString(),

@@ -7,6 +7,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import OnboardingScreen from '../screens/auth/OnboardingScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +18,7 @@ export default function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
