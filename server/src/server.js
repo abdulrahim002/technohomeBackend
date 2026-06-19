@@ -111,7 +111,9 @@ mongoose.connect(process.env.MONGODB_URI)
     
     // تشغيل الوظائف المجدولة (Cron Jobs)
     const { startExpiredRequestsJob } = require('./services/cron/expiredRequestsJob');
+    const { startReminderJob } = require('./services/cron/reminderJob');
     startExpiredRequestsJob();
+    startReminderJob();
 
     server.listen(PORT, () => {
       console.log(`🚀 Server with Socket.io running on port ${PORT}`);

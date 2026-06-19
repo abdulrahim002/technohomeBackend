@@ -126,7 +126,7 @@ const processExpiredRequests = async () => {
  */
 const startExpiredRequestsJob = () => {
   // '0 * * * *' = في بداية كل ساعة (الدقيقة 0)
-  cron.schedule('0 * * * *', processExpiredRequests, {
+  cron.schedule('* * * * *', processExpiredRequests, {
     timezone: 'Africa/Tripoli'
   });
 
